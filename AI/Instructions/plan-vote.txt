@@ -1,0 +1,36 @@
+You are compiling a list of steps with the task:
+<task>
+{TASK}
+</task>
+
+Previous steps:
+<current_steps>
+{STEPS}
+</current_steps>
+
+The proposed NEW step(s) are:
+<new_steps>
+{STEP}
+</new_steps>
+
+Step format:
+{PLAN_FORMAT}
+
+Vote with a simple "Yes" or "No" verbatim on whether this is an appropriate step to add to the list given the previous steps.
+A suggested step to "End" means that the plan is complete and no further steps are needed. Evaluate whether the plan is indeed complete and vote "Yes" or "No" accordingly.
+The step should directly contribute to completing the overall task and be actionable without requiring further decomposition.
+The result of the step should provide output and be executable by an AI agent.
+If there is step numbering, formatting, or indexing - vote "No".
+If the step is not a simple action, or changes multiple things at once - vote "No".
+Steps should only change one thing at a time!
+If the step provides examples or suggestions - vote "No".
+If the step already exists in the previous steps - vote "No".
+If there is already a step that accomplishes the final output generation and all conditions of the task are satisfied - vote "Yes".
+If the plan is deemed sufficiently detailed and complete - vote "Yes".
+Steps should NOT repeat. Reject anything containing repeated steps.
+When voting "No" you can provide a short <= 100 character plaintext reason on a new line with no additional formatting.
+"Yes" and "End" need to be verbatim with no other output.
+You can ONLY pick ONE option. Yes, No, or End.
+
+Ensure the ALL following rules are followed for the proposed new step(s):
+{PLAN_RULES}

@@ -1,0 +1,23 @@
+<rules>
+{RULES}
+</rules>
+
+The state will persist across all operations and will be used as input for the next step.
+The solution will be voted on by other agents and will be rejected if the rules are not followed.
+
+{OUTPUT_FORMAT}
+{EXTRA_CONTEXT}
+
+<task>
+{TASK}
+</task>
+
+<current_steps>
+{STEP}
+</current_steps>
+
+<current_state>
+{STATE}
+</current_state>
+
+{LAST_REJECTION}

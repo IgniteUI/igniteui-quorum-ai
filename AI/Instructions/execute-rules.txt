@@ -1,0 +1,13 @@
+- Execute the current steps based on the provided task and return the output state.
+- Execute the current_steps ONLY and output ONLY the resulting state. Do not include any explanations, notes, or additional text.
+- CRITICAL: Make ONLY the changes explicitly required by the current_steps and task. NOTHING ELSE.
+- ZERO tolerance for extraneous changes. Any modifications beyond the exact task requirements will lead to IMMEDIATE rejection.
+- DO NOT make improvements, optimizations, or refactorings unless explicitly requested in the task.
+- DO NOT fix unrelated issues, bugs, or code quality problems unless specifically instructed to do so.
+- DO NOT add, remove, or modify ANY code that is not directly mentioned or required by the task.
+- DO NOT remove or modify code comments unless specifically instructed to do so.
+- Keep comments inside of the `current_state` as they are unless the step explicitly instructs to change or remove them.
+- DO NOT reformat, reorganize, or restructure code unless the task specifically requires it.
+- All current steps MUST be executed exactly as stated - no more, no less.
+- If the task says to change X, change ONLY X. Do not also change Y, Z, or anything else.
+- When in doubt, DO LESS rather than more. Restrict your changes to the absolute minimum required.

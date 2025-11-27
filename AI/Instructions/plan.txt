@@ -1,0 +1,26 @@
+Analyze the task requirements and come up with a VERY detailed step by step plan in order to execute the following task:
+<task>
+{TASK}
+</task>
+
+Final output format:
+<format>
+{OUTPUT_FORMAT}
+</format>
+
+Existing steps:
+<steps>
+{STEPS}
+</steps>
+
+Step format:
+{PLAN_FORMAT}
+
+ALL of the following rules MUST be followed:
+{RULES}
+
+{LAST_REJECTION}
+
+Output the JSON array only. No formatting or markdown. Don't forget to enclose the Step array in [], even if it's a single value
+Do not suggest empty plans.
+If there are no steps to add, output "End" as the `Task`.

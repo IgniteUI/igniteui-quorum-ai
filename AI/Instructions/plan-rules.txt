@@ -1,0 +1,26 @@
+Steps:
+- Output 1 to {BATCH_SIZE} steps to append to the current steps, keeping in mind the previous steps
+- Do NOT output more than {BATCH_SIZE} steps
+- Do not suggest already existing steps
+- Output ONLY steps to append to existing ones. Do not repeat existing steps
+Logic:
+- Each step can modify AT MOST 2 values
+- Do not split generating a value and setting it into separate steps
+- The steps should be simple to execute, atomic, maximally decomposed, incremental, and quick to execute by a single agent
+- The steps should require minimal context to execute
+- The steps should directly contribute to completing the overall task and be actionable without requiring further decomposition
+- The result of the steps should provide output and be executable by an AI agent
+- Do not give examples or suggestions. Only concrete actionable steps
+- Do not include justifications or require such in the steps
+- Do not suggest steps which set something to a concrete value. Values will be determined during execution
+- Do NOT suggest setting a field to something. Instead, suggest determining a value for the field 
+Format:
+- Output the simple steps as plaintext _only_ or "End" as the `Task` if you consider the plan to be complete
+- Do not prepend any numbering, indexing, formatting, or other
+- Step length should be no longer than 128 characters
+- Steps which require knowledge of the output format should have `RequiresFormat` set to true
+- If setting a non-standard value type `ExtraContext` MUST describe the required type/format in the format: "field": type | type | null. Assume that the executor cannot infer types from names alone and does not have format information unless `RequiresFormat` is set to true.
+Finalizing:
+- If you think the plan is complete, output "End" as the `Task`
+- If the last step is final output generation, output "End" as the `Task`
+- Output "End" if there is already a task that accomplishes the final output generation and all conditions of the task are satisfied

@@ -1,0 +1,15 @@
+// An array of Step objects
+[
+    // A single atomic Step object
+    {
+      // The atomic task to execute
+      "Task": string,
+      // Any extra information/context which may be required to execute the step. Can include examples and explanations. Should be used instead of `RequiresFormat` to provide type verbose hints if possible
+      // NOTE: If `RequiresFormat` is false the agent will not know the `format` of the output so `ExtraContext` should provide sufficient information to complete the step.
+      // You can provide type context in the form of e.g. "field": "this" | "that" | null
+      // OR e.g. "otherField": number | string | null
+      "ExtraContext": string,
+      // True if the task requires the specific output format for the overall task. If a step sets a value and has no `ExtraContext` describing it, this should probably be true
+      "RequiresFormat": bool
+    }
+]
