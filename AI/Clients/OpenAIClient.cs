@@ -152,9 +152,6 @@ namespace MAKER.AI.Clients
 
                 if (parameters.Length > 0)
                 {
-                    var optionalParams = parameters.Where(p => p.IsOptional);
-                    var requiredParams = parameters.Where(p => !p.IsOptional);
-
                     var paramObj = new
                     {
                         type = "object",
@@ -166,7 +163,7 @@ namespace MAKER.AI.Clients
                                 description = p.GetCustomAttributes<AIDescription>().FirstOrDefault()?.Description ?? string.Empty
                             }
                         ),
-                        required = requiredParams.Select(p => p.Name).ToArray(),
+                        required = parameters.Where(p => !p.IsOptional).Select(p => p.Name).ToArray(),
                         additionalProperties = false
                     };
 
