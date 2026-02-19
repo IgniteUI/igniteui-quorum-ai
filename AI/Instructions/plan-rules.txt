@@ -9,6 +9,7 @@ Logic:
 - The steps should be simple to execute, atomic, maximally decomposed, incremental, and quick to execute by a single agent
 - The steps should require minimal context to execute
 - The steps should directly contribute to completing the overall task and be actionable without requiring further decomposition
+- Do NOT duplicate steps or suggest steps that have already been suggested in the previous steps
 - The result of the steps should provide output and be executable by an AI agent
 - Do not give examples or suggestions. Only concrete actionable steps
 - Do not include justifications or require such in the steps

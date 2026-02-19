@@ -28,7 +28,14 @@ namespace MAKER.AI.Clients
             {
                 var tools = GenerateTools(toolsObject);
                 tools.ForEach(t => opts.Tools.Add(t));
+                opts.AllowParallelToolCalls = true;
             }
+
+            opts.ReasoningEffortLevel = ChatReasoningEffortLevel.Low;
+
+            //#pragma warning disable SCME0001
+            //  opts.Patch.Set("$.prompt_cache_retention"u8, "24h");
+            //#pragma warning restore SCME0001
 
             int inputTokens = 0;
             int outputTokens = 0;

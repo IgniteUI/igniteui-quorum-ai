@@ -172,7 +172,7 @@ namespace MAKER.AI.Orchestrators
             try
             {
                 OnStepsProposed?.Invoke(deserializedSteps);
-                var (vote, reasons) = await VotePlanInternal(task, deserializedSteps, steps, batchSize, k);
+                var (vote, reasons, usage) = await VotePlanInternal(task, deserializedSteps, steps, batchSize, k);
                 if (!vote)
                 {
                     var rejection = new AIVoteException($"Proposed step was rejected by voting.", deserializedSteps, reasons);
@@ -195,7 +195,7 @@ namespace MAKER.AI.Orchestrators
             return deserializedSteps;
         }
 
-        public async Task<(bool, IEnumerable<string>)> VotePlanInternal(string task, IEnumerable<Step> proposed, IEnumerable<Step> steps, int batchSize = 2, int k = 5, object? tools = null)
+        public async Task<(bool, IEnumerable<string>, AIResponse)> VotePlanInternal(string task, IEnumerable<Step> proposed, IEnumerable<Step> steps, int batchSize = 2, int k = 5, object? tools = null)
         {
             var voteTemplate = await ReadPromptTemplate(config.Instructions.PlanVote);
             var planFormat = await ReadPromptTemplate(config.Instructions.PlanFormat);
@@ -213,23 +213,26 @@ namespace MAKER.AI.Orchestrators
 
             try
             {
-                var (vote, reasons) = await this.RunVotingRound(k, prompt, planVotingClient, tools);
-                return (vote, reasons);
+                var (vote, reasons, usage) = await this.RunVotingRound(k, prompt, planVotingClient, tools);
+                return (vote, reasons, usage);
             }
             catch
             {
-                var (vote, reasons) = await this.RunVotingRound(k, prompt, planVotingClient, tools);
-                return (vote, reasons);
+                var (vote, reasons, usage) = await this.RunVotingRound(k, prompt, planVotingClient, tools);
+                return (vote, reasons, usage);
             }
         }
 
-        private async Task<(bool, IEnumerable<string>)> RunVotingRound(int k, string prompt, IAIClient client, object? tools = null)
+        private async Task<(bool, IEnumerable<string>, AIResponse)> RunVotingRound(int k, string prompt, IAIClient client, object? tools = null)
         {
             int positive = 0;
             int negative = 0;
             int end = 0;
 
             var reasons = new List<string>();
+
+            int inputTokens = 0;
+            int outputTokens = 0;
 
             while (positive < negative + k && negative < positive + k && end != k)
             {
@@ -244,6 +247,9 @@ namespace MAKER.AI.Orchestrators
                 {
                     var t = await bucket;
                     var voteResponseObj = await t;
+
+                    inputTokens += voteResponseObj.InputTokens;
+                    outputTokens += voteResponseObj.OutputTokens;
                     var voteResponse = voteResponseObj.Content!.ReplaceLineEndings().Trim();
 
                     if (voteResponse != null)
@@ -299,7 +305,11 @@ namespace MAKER.AI.Orchestrators
                 throw new AIVoteException("Voters deemed the task finished.", VoteCancellationReason.Ended);
             }
 
-            return (positive >= negative + k, reasons);
+            return (positive >= negative + k, reasons, new AIResponse
+            {
+                InputTokens = inputTokens,
+                OutputTokens = outputTokens
+            });
         }
 
         private List<Task<AIResponse>> GenerateVoteRequests(string prompt, int amount, IAIClient client, object? tools = null)
