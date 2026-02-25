@@ -2,17 +2,16 @@
 using MAKER.Configuration;
 using OpenAI.Chat;
 
-using System.Reflection;
 using System.Text.Json;
 
 #pragma warning disable OPENAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 namespace MAKER.AI.Clients
 {
-    internal class OpenAIClient(ExecutorConfig config, string model, bool priority = false) : IAIClient
+    internal class OpenAIClient(ExecutorConfig config, string model, bool priority = false) : AIClientBase
     {
         private readonly ChatClient _client = new(model: model, apiKey: config.AIProviderKeys.OpenAI);
 
-        public async Task<AIResponse> Request(string prompt, object? toolsObject = null)
+        protected override async Task<AIResponse?> RequestInternal(string prompt, List<AIFunctionInfo>? tools = null)
         {
             var opts = new ChatCompletionOptions();
 
@@ -24,10 +23,10 @@ namespace MAKER.AI.Clients
             List<ChatMessage> messages = [new UserChatMessage(prompt)];
 
 
-            if (toolsObject != null)
+            if (tools != null)
             {
-                var tools = GenerateTools(toolsObject);
-                tools.ForEach(t => opts.Tools.Add(t));
+                var chatTools = GenerateTools(tools);
+                chatTools.ForEach(t => opts.Tools.Add(t));
                 opts.AllowParallelToolCalls = true;
             }
 
@@ -43,7 +42,7 @@ namespace MAKER.AI.Clients
             do
             {
                 requiresAction = false;
-                var request = await _client.CompleteChatAsync(messages, opts);
+                        var request = await _client.CompleteChatAsync(messages, opts);
 
                 if (request.Value == null)
                 {
@@ -61,46 +60,22 @@ namespace MAKER.AI.Clients
 
                             foreach (ChatToolCall toolCall in request.Value.ToolCalls)
                             {
-                                var functionName = toolCall.FunctionName;
-
-                                if (toolsObject != null)
+                                try
                                 {
-                                    var method = toolsObject.GetType().GetMethod(functionName, BindingFlags.Public | BindingFlags.Instance)
-                                        ?? throw new Exception($"Tool call for {functionName} failed: no such method found on tools object.");
+                                    var result = InvokeTool(toolCall.FunctionName, toolCall.FunctionArguments.ToString());
 
-                                    var parameters = method.GetParameters();
-                                    var args = new List<object?>();
-
-                                    using JsonDocument argumentsJson = JsonDocument.Parse(toolCall.FunctionArguments);
-
-                                    foreach (var param in parameters)
-                                    {
-                                        if (argumentsJson.RootElement.TryGetProperty(param.Name!, out var argValue))
-                                        {
-                                            args.Add(Convert.ChangeType(argValue.GetRawText().Trim('"', ' ', '\n'), param.ParameterType));
-                                        }
-                                        else
-                                        {
-                                            throw new Exception($"Tool call for {functionName} failed: missing argument {param.Name}.");
-                                        }
-                                    }
-
-                                    try
-                                    {
-                                        var result = method.Invoke(toolsObject, [.. args]);
-
-                                        messages.Add(new ToolChatMessage(
-                                            toolCall.Id,
-                                            result?.ToString() ?? string.Empty
-                                        ));
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        messages.Add(new ToolChatMessage(
-                                            toolCall.Id,
-                                            $"[ERROR] [{ex.InnerException?.GetType().Name}]: {ex.InnerException?.Message}"
-                                        ));
-                                    }
+                                    messages.Add(new ToolChatMessage(
+                                        toolCall.Id,
+                                        result
+                                    ));
+                                }
+                                catch (Exception ex)
+                                {
+                                    var inner = ex.InnerException ?? ex;
+                                    messages.Add(new ToolChatMessage(
+                                        toolCall.Id,
+                                        $"[ERROR] [{inner.GetType().Name}]: {inner.Message}"
+                                    ));
                                 }
 
                                 // TODO: MCP, code exec, file search, etc
@@ -144,33 +119,28 @@ namespace MAKER.AI.Clients
             };
         }
 
-        private List<ChatTool> GenerateTools(object toolsObject)
+        private List<ChatTool> GenerateTools(List<AIFunctionInfo> functions)
         {
             List<ChatTool> tools = [];
-            Type objectType = toolsObject.GetType();
 
-            var methods = objectType.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
-            foreach (var method in methods)
+            foreach (var function in functions)
             {
-                var parameters = method.GetParameters();
-                var description = method.GetCustomAttributes<AIDescription>().FirstOrDefault()?.Description;
-
                 BinaryData? paramData = null;
 
-                if (parameters.Length > 0)
+                if (function.Parameters.Count > 0)
                 {
                     var paramObj = new
                     {
                         type = "object",
-                        properties = parameters.ToDictionary(
-                            p => p.Name!,
+                        properties = function.Parameters.ToDictionary(
+                            p => p.Name,
                             p => new
                             {
                                 type = p.ParameterType == typeof(string) ? "string" : "number",
-                                description = p.GetCustomAttributes<AIDescription>().FirstOrDefault()?.Description ?? string.Empty
+                                description = p.Description
                             }
                         ),
-                        required = parameters.Where(p => !p.IsOptional).Select(p => p.Name).ToArray(),
+                        required = function.Parameters.Where(p => p.IsRequired).Select(p => p.Name).ToArray(),
                         additionalProperties = false
                     };
 
@@ -178,10 +148,9 @@ namespace MAKER.AI.Clients
                     paramData = BinaryData.FromString(json);
                 }
 
-
                 var tool = ChatTool.CreateFunctionTool(
-                    functionName: method.Name,
-                    functionDescription: description,
+                    functionName: function.Name,
+                    functionDescription: function.Description,
                     functionParameters: paramData ?? null
                 );
 
