@@ -1,5 +1,5 @@
 {
-  "_comment": "Paste the 'mcpServers' block into your claude_desktop_config.json.",
+  "_comment": "1. Paste the 'mcpServers' block into claude_desktop_config.json.  2. Update the project path to match your local setup.  3. Stop MAKER.McpServer if it is already running — Claude Desktop will own the process via STDIO.",
   "_configLocation": {
     "windows": "%APPDATA%\\Claude\\claude_desktop_config.json",
     "macOS":   "~/Library/Application Support/Claude/claude_desktop_config.json"
