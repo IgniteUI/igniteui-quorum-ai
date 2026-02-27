@@ -1,0 +1,26 @@
+{
+  "name": "@igniteui/maker-mcp",
+  "version": "1.0.0",
+  "description": "MAKER — Maximal Agentic decomposition, first-to-ahead-by-K Error correction, Red-flagging. MCP server for AI planning and execution.",
+  "bin": {
+    "maker-mcp": "./bin/maker-mcp.js"
+  },
+  "files": [
+    "bin/maker-mcp.js",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "test": "node test/prepublish.test.js",
+    "prepublishOnly": "npm test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/IgniteUI/MAKER"
+  },
+  "keywords": ["mcp", "ai", "llm", "planning", "execution", "agentic", "maker"],
+  "license": "MIT"
+}

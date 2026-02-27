@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.0.11222.15
@@ -9,6 +9,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MAKER.McpServer", "MAKER.Mc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MAKER.WebApp", "MAKER.WebApp\MAKER.WebApp.csproj", "{4F81820D-AE5E-2E83-CCB0-25082EF2F9DD}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MAKER.Npm", "MAKER.Npm", "{D5E6F7A8-B9C0-1D2E-3F4A-5B6C7D8E9F0A}"
+	ProjectSection(SolutionItems) = preProject
+		MAKER.Npm\package.json = MAKER.Npm\package.json
+		MAKER.Npm\bin\maker-mcp.js = MAKER.Npm\bin\maker-mcp.js
+	EndProjectSection
+EndProject
+
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

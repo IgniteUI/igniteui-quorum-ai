@@ -73,5 +73,5 @@ static string FindSolutionRoot()
         }
     }
 
-    return Directory.GetCurrentDirectory();
+    return AppContext.BaseDirectory; // standalone binary: instructions are co-located
 }
