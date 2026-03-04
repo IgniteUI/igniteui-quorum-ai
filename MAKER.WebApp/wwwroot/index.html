@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MAKER</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="header">
+    <div class="header__brand">
+      <span class="header__logo">⚙</span>
+      <span class="header__title">MAKER</span>
+    </div>
+    <p class="header__subtitle">Maximal Agentic decomposition · first-to-ahead-by-<em>K</em> Error correction · Red-flagging</p>
+  </header>
+
+  <div class="workspace">
+
+    <!-- Left panel: controls -->
+    <aside class="controls">
+
+      <label class="field-label" for="prompt">Prompt</label>
+      <textarea id="prompt" class="prompt" placeholder="Describe the task you want MAKER to plan and / or execute…" rows="8"></textarea>
+
+      <div class="sliders">
+        <div class="slider-row">
+          <label for="batchSize">Batch size</label>
+          <input id="batchSize" type="range" min="1" max="5" value="2" />
+          <span id="batchSizeVal" class="slider-val">2</span>
+        </div>
+        <div class="slider-row">
+          <label for="kInput">K (consensus)</label>
+          <input id="kInput" type="range" min="2" max="20" value="10" />
+          <span id="kVal" class="slider-val">10</span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="planBtn" class="btn btn--primary">Plan</button>
+        <button id="executeBtn" class="btn btn--secondary" disabled>Execute</button>
+        <button id="planExecuteBtn" class="btn btn--accent">Plan &amp; Execute</button>
+      </div>
+
+      <div id="status" class="status"></div>
+
+    </aside>
+
+    <!-- Right panel: results -->
+    <main class="results">
+
+      <section class="panel panel--steps">
+        <div class="panel__header">
+          <h2 class="panel__title">Plan</h2>
+          <span id="stepCount" class="badge"></span>
+        </div>
+        <div id="steps" class="steps-list"></div>
+      </section>
+
+      <section class="panel panel--result">
+        <div class="panel__header">
+          <h2 class="panel__title">Result</h2>
+        </div>
+        <div id="result" class="result-body"></div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Bottom: live event feed -->
+  <footer class="feed-bar">
+    <div class="feed-bar__label">Live events</div>
+    <div id="feed" class="feed"></div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

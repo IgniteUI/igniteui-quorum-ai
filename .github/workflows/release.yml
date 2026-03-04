@@ -1,0 +1,106 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  # ── Build self-contained binary for each platform ──────────────────────────
+  build:
+    name: Build ${{ matrix.rid }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+            binary: MAKER.McpServer
+          - os: windows-latest
+            rid: win-x64
+            binary: MAKER.McpServer.exe
+          - os: macos-latest
+            rid: osx-x64
+            binary: MAKER.McpServer
+          - os: macos-latest
+            rid: osx-arm64
+            binary: MAKER.McpServer
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish & package
+        shell: bash
+        run: |
+          dotnet publish MAKER.McpServer/MAKER.McpServer.csproj \
+            -c Release \
+            -r ${{ matrix.rid }} \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:DebugType=none \
+            -o ./dist
+
+          # Rename to a consistent binary name
+          if [[ "${{ matrix.rid }}" == win-* ]]; then
+            mv ./dist/${{ matrix.binary }} ./dist/maker-mcp.exe
+          else
+            mv ./dist/${{ matrix.binary }} ./dist/maker-mcp
+            chmod +x ./dist/maker-mcp
+          fi
+
+          # Bundle binary + appsettings + instruction files into a tarball
+          tar -czf maker-mcp-${{ matrix.rid }}.tar.gz -C ./dist .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: maker-mcp-${{ matrix.rid }}
+          path: maker-mcp-${{ matrix.rid }}.tar.gz
+
+  # ── Create GitHub Release with all tarballs ────────────────────────────────
+  release:
+    name: GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: ./artifacts/*.tar.gz
+          generate_release_notes: true
+
+  # ── Publish npm package ────────────────────────────────────────────────────
+  publish-npm:
+    name: Publish npm
+    needs: release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      # Sync package.json version with the git tag (strips the 'v' prefix)
+      - name: Set version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+        working-directory: MAKER.Npm
+
+      - name: Publish
+        run: npm publish --access public
+        working-directory: MAKER.Npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

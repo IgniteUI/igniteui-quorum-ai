@@ -1,20 +1,39 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.0.11222.15
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MAKER", "MAKER.csproj", "{39EB5D8D-BAA2-44CA-8BF0-9F71CFD5D6CB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MAKER", "MAKER\MAKER.csproj", "{82F8CCBF-CD51-55A4-DA3B-5F1AA28BE086}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MAKER.McpServer", "MAKER.McpServer\MAKER.McpServer.csproj", "{B0FCE64C-CD9D-6E9C-96E4-23FDF544CF1B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MAKER.WebApp", "MAKER.WebApp\MAKER.WebApp.csproj", "{4F81820D-AE5E-2E83-CCB0-25082EF2F9DD}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MAKER.Npm", "MAKER.Npm", "{D5E6F7A8-B9C0-1D2E-3F4A-5B6C7D8E9F0A}"
+	ProjectSection(SolutionItems) = preProject
+		MAKER.Npm\package.json = MAKER.Npm\package.json
+		MAKER.Npm\bin\maker-mcp.js = MAKER.Npm\bin\maker-mcp.js
+	EndProjectSection
+EndProject
+
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{39EB5D8D-BAA2-44CA-8BF0-9F71CFD5D6CB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{39EB5D8D-BAA2-44CA-8BF0-9F71CFD5D6CB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{39EB5D8D-BAA2-44CA-8BF0-9F71CFD5D6CB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{39EB5D8D-BAA2-44CA-8BF0-9F71CFD5D6CB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{82F8CCBF-CD51-55A4-DA3B-5F1AA28BE086}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{82F8CCBF-CD51-55A4-DA3B-5F1AA28BE086}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{82F8CCBF-CD51-55A4-DA3B-5F1AA28BE086}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{82F8CCBF-CD51-55A4-DA3B-5F1AA28BE086}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B0FCE64C-CD9D-6E9C-96E4-23FDF544CF1B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B0FCE64C-CD9D-6E9C-96E4-23FDF544CF1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B0FCE64C-CD9D-6E9C-96E4-23FDF544CF1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B0FCE64C-CD9D-6E9C-96E4-23FDF544CF1B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4F81820D-AE5E-2E83-CCB0-25082EF2F9DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F81820D-AE5E-2E83-CCB0-25082EF2F9DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F81820D-AE5E-2E83-CCB0-25082EF2F9DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F81820D-AE5E-2E83-CCB0-25082EF2F9DD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
