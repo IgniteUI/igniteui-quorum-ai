@@ -8,7 +8,7 @@ public record SseEvent(string Type, string Data);
 
 public class ExecutorService(IConfiguration configuration)
 {
-    public Executor Create() => new(BuildConfig(), configuration["Executor:Format"] ?? "plaintext");
+    public Executor Create() => new(BuildConfig(), GetFormat());
 
     public Executor CreateWithSseEvents(ChannelWriter<SseEvent> writer)
     {
@@ -23,6 +23,12 @@ public class ExecutorService(IConfiguration configuration)
         if (progress != null)
             WireEvents(executor, evt => progress.Report(JsonSerializer.Serialize(evt)));
         return executor;
+    }
+
+    private string GetFormat()
+    {
+        var value = configuration.GetValue<string>("Executor:Format")?.Trim();
+        return string.IsNullOrWhiteSpace(value) ? "plaintext" : value;
     }
 
     private static void WireEvents(Executor executor, Action<SseEvent> emit)
