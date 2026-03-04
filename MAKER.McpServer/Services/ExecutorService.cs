@@ -8,7 +8,7 @@ public record SseEvent(string Type, string Data);
 
 public class ExecutorService(IConfiguration configuration)
 {
-    public Executor Create() => new(BuildConfig(), "plaintext");
+    public Executor Create() => new(BuildConfig(), configuration["Executor:Format"] ?? "plaintext");
 
     public Executor CreateWithSseEvents(ChannelWriter<SseEvent> writer)
     {

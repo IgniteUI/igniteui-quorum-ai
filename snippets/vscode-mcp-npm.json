@@ -1,0 +1,34 @@
+{
+  "_readme": [
+    "VS Code MCP config for using MAKER via the published npm package.",
+    "Copy the 'servers' content into your workspace .vscode/mcp.json",
+    "or into VS Code user settings under 'mcp.servers'.",
+    "Requires Node.js 18+. No .NET installation needed."
+  ],
+  "servers": {
+    "maker": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@igniteui/maker-mcp", "--stdio"],
+      "env": {
+        "Executor__AIProviderKeys__OpenAI":             "<your-openai-key>",
+        "Executor__AIProviderKeys__Anthropic":          "<your-anthropic-key>",
+        "Executor__AIProviderKeys__Google":             "<your-google-key>",
+
+        "Executor__Format":                             "plaintext",
+
+        "Executor__Clients__Planning__Provider":        "OpenAI",
+        "Executor__Clients__Planning__Model":           "gpt-4o",
+
+        "Executor__Clients__PlanVoting__Provider":      "OpenAI",
+        "Executor__Clients__PlanVoting__Model":         "gpt-4o-mini",
+
+        "Executor__Clients__Execution__Provider":       "OpenAI",
+        "Executor__Clients__Execution__Model":          "gpt-4o",
+
+        "Executor__Clients__ExecutionVoting__Provider": "OpenAI",
+        "Executor__Clients__ExecutionVoting__Model":    "gpt-4o-mini"
+      }
+    }
+  }
+}

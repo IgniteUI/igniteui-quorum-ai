@@ -1,0 +1,38 @@
+{
+  "_readme": [
+    "VS Code MCP config for running MAKER directly from the cloned repo.",
+    "Copy the 'servers' content into your workspace .vscode/mcp.json",
+    "or into VS Code user settings under 'mcp.servers'.",
+    "Requires .NET 8 SDK. ${workspaceFolder} resolves to the repo root."
+  ],
+  "servers": {
+    "maker": {
+      "type": "stdio",
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project", "${workspaceFolder}/MAKER.McpServer/MAKER.McpServer.csproj",
+        "--", "--stdio"
+      ],
+      "env": {
+        "Executor__AIProviderKeys__OpenAI":             "<your-openai-key>",
+        "Executor__AIProviderKeys__Anthropic":          "<your-anthropic-key>",
+        "Executor__AIProviderKeys__Google":             "<your-google-key>",
+
+        "Executor__Format":                             "plaintext",
+
+        "Executor__Clients__Planning__Provider":        "OpenAI",
+        "Executor__Clients__Planning__Model":           "gpt-4o",
+
+        "Executor__Clients__PlanVoting__Provider":      "OpenAI",
+        "Executor__Clients__PlanVoting__Model":         "gpt-4o-mini",
+
+        "Executor__Clients__Execution__Provider":       "OpenAI",
+        "Executor__Clients__Execution__Model":          "gpt-4o",
+
+        "Executor__Clients__ExecutionVoting__Provider": "OpenAI",
+        "Executor__Clients__ExecutionVoting__Model":    "gpt-4o-mini"
+      }
+    }
+  }
+}
