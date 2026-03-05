@@ -3,7 +3,7 @@
  * Communicates with MAKER.McpServer via POST + SSE streaming.
  */
 
-const API_BASE = 'http://localhost:5000';
+let API_BASE = ''; // set by init() from /api/config
 
 // ── State ──────────────────────────────────────────────────────────────────
 let currentSteps = null;      // steps produced by the last Plan call
@@ -355,3 +355,22 @@ function escHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+  setRunning(true);
+  setStatus('Loading config…', 'active');
+  try {
+    const res = await fetch('/api/config');
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    const config = await res.json();
+    API_BASE = config.mcpServerUrl ?? 'http://localhost:5000';
+    setStatus('', '');
+  } catch (err) {
+    setStatus(`Failed to load config: ${err.message}`, 'error');
+    return; // leave buttons disabled
+  }
+  setRunning(false);
+}
+
+init();
