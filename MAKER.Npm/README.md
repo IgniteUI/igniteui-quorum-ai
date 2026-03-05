@@ -77,6 +77,29 @@ The native binary (~50 MB) is downloaded and cached on first run. No .NET instal
 
 ---
 
+## Prerequisites — GitHub Packages Registry
+
+This package is published to **GitHub Packages**, not npmjs.com. Before installing, configure npm to fetch `@igniteui` packages from GitHub Packages:
+
+```bash
+npm config set @igniteui:registry https://npm.pkg.github.com
+```
+
+Then authenticate with a **GitHub Personal Access Token (PAT)** that has the `read:packages` scope:
+
+```bash
+npm config set //npm.pkg.github.com/:_authToken YOUR_GITHUB_PAT
+```
+
+> **Tip:** You can also place these settings in a project-level `.npmrc` file:
+>
+> ```ini
+> @igniteui:registry=https://npm.pkg.github.com
+> //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+> ```
+
+---
+
 ## Installation
 
 ### Claude Desktop

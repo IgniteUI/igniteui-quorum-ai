@@ -1,5 +1,9 @@
 {
-  "_comment": "1. Paste the 'mcpServers' block into claude_desktop_config.json.  2. Stop MAKER.McpServer if it is already running — Claude Desktop will own the process via STDIO.",
+  "_comment": [
+    "0. Configure GitHub Packages registry (one-time): run 'npm config set @igniteui:registry https://npm.pkg.github.com' and 'npm config set //npm.pkg.github.com/:_authToken <YOUR_GITHUB_PAT>' (PAT needs read:packages scope).",
+    "1. Paste the 'mcpServers' block into claude_desktop_config.json.",
+    "2. Stop MAKER.McpServer if it is already running — Claude Desktop will own the process via STDIO."
+  ],
   "_configLocation": {
     "windows": "%APPDATA%\\Claude\\claude_desktop_config.json",
     "macOS":   "~/Library/Application Support/Claude/claude_desktop_config.json"

@@ -1,6 +1,10 @@
 {
   "_readme": [
-    "VS Code MCP config for using MAKER via the published npm package.",
+    "VS Code MCP config for using MAKER via the published GitHub Package.",
+    "Before first use, configure the GitHub Packages npm registry (one-time):",
+    "  npm config set @igniteui:registry https://npm.pkg.github.com",
+    "  npm config set //npm.pkg.github.com/:_authToken <YOUR_GITHUB_PAT>",
+    "(The PAT needs the 'read:packages' scope.)",
     "Copy the 'servers' content into your workspace .vscode/mcp.json",
     "or into VS Code user settings under 'mcp.servers'.",
     "Requires Node.js 18+. No .NET installation needed."
