@@ -10,12 +10,12 @@
       "args": [
         "run",
         "--project",
-        "D:\\Repos\\MAKER\\MAKER.McpServer\\MAKER.McpServer.csproj",
+        "<path-to-MAKER.McpServer.csproj>",
         "--",
         "--stdio"
       ],
       "env": {
-		"Executor__AIProviderKeys__OpenAI":             "<your-openai-key>",
+        "Executor__AIProviderKeys__OpenAI":             "<your-openai-key>",
         "Executor__AIProviderKeys__Anthropic":          "<your-anthropic-key>",
         "Executor__AIProviderKeys__Google":             "<your-google-key>",
         "Executor__Format":                             "plaintext",
