@@ -68,7 +68,7 @@ public class MakerTools(ExecutorService executorService)
             var executor = executorService.CreateWithProgress(progress);
 
             progress?.Report(JsonSerializer.Serialize(new SseEvent("phase", "Planning...")));
-            var steps = await executor.Plan(prompt, batchSize, k);
+            var steps = await executor.Plan(prompt, batchSize, k, cancellationToken: cancellationToken);
 
             progress?.Report(JsonSerializer.Serialize(new SseEvent("phase", $"Executing {steps.Count} steps...")));
             return await executor.Execute(steps, prompt, batchSize, k, cancellationToken: cancellationToken);
