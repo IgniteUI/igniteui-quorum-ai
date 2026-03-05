@@ -1,40 +1,100 @@
-﻿using MAKER.AI.Models;
+﻿using MAKER.AI.Attributes;
+using MAKER.AI.Exceptions;
+using MAKER.AI.Models;
+using MAKER.AI.Validation;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace MAKER.AI.Clients
 {
-    public class AIClientBase : IAIClient
+    public abstract partial class AIClientBase : IAIClient
     {
-        protected object? _toolsObject;
+        public int MaxRequestRetries { get; set; } = 3;
 
-        public Task<AIResponse?> Request(string prompt, object? toolsObject = null)
+        public int MaxGuardedRetries { get; set; } = 3;
+
+        public async Task<AIResponse?> Request(string prompt, object? toolsObject = null, CancellationToken cancellationToken = default)
         {
-            _toolsObject = toolsObject;
-
             List<AIFunctionInfo>? functions = null;
             if (toolsObject != null)
             {
                 functions = GenerateFunctionInfo(toolsObject);
             }
 
-            return RequestInternal(prompt, functions?.Count > 0 ? functions : null);
-        }
+            var tools = functions?.Count > 0 ? functions : null;
 
-        protected virtual Task<AIResponse?> RequestInternal(string prompt, List<AIFunctionInfo>? tools = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        protected string InvokeTool(string functionName, string argumentsJson)
-        {
-            if (_toolsObject == null)
+            for (int attempt = 0; ; attempt++)
             {
-                throw new InvalidOperationException($"Tool call for {functionName} failed: no tools object has been set.");
+                try
+                {
+                    return await RequestInternal(prompt, tools, toolsObject, cancellationToken);
+                }
+                catch (Exception ex) when (attempt < MaxRequestRetries && IsTransientError(ex, out int delayMs))
+                {
+                    await Task.Delay(delayMs, cancellationToken);
+                }
+            }
+        }
+
+        protected virtual bool IsTransientError(Exception ex, out int delayMs)
+        {
+            delayMs = 0;
+
+            if (ex is HttpRequestException)
+            {
+                delayMs = 2000;
+                return true;
             }
 
-            var method = _toolsObject.GetType().GetMethod(functionName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)
-                ?? throw new MissingMethodException($"Tool call for {functionName} failed: no such public method found on {_toolsObject.GetType().Name}.");
+            return false;
+        }
+
+        public Task<AIResponse> GuardedRequest(string prompt, List<IAIRedFlagValidator> validators, object? tools = null, CancellationToken cancellationToken = default)
+        {
+            return GuardedRequestInternal(prompt, validators, tools, MaxGuardedRetries, cancellationToken);
+        }
+
+        private async Task<AIResponse> GuardedRequestInternal(string prompt, List<IAIRedFlagValidator> validators, object? tools, int remainingRetries, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var responseObj = await Request(prompt, tools, cancellationToken) ?? throw new AIRedFlagException("Received null response from the model.");
+                var response = responseObj.Content ?? throw new AIRedFlagException("Received response with null content from the model.");
+
+                var jsonMatch = JsonCodeBlockRegex().Match(response);
+                response = jsonMatch.Success ? jsonMatch.Groups[1].Value.Trim() : response.Trim();
+
+                validators.ForEach(validator => validator.Validate(response));
+
+                return new AIResponse()
+                {
+                    Content = response,
+                    InputTokens = responseObj.InputTokens,
+                    OutputTokens = responseObj.OutputTokens,
+                };
+            }
+            catch (AIRedFlagException ex)
+            {
+                if (remainingRetries <= 0) throw;
+                return await GuardedRequestInternal($"{prompt}\n\nLast response was rejected:\n{ex.Message}", validators, tools, remainingRetries - 1, cancellationToken);
+            }
+        }
+
+        protected abstract Task<AIResponse?> RequestInternal(string prompt, List<AIFunctionInfo>? tools = null, object? toolsObject = null, CancellationToken cancellationToken = default);
+
+        protected static string FormatToolError(Exception ex)
+        {
+            var inner = ex.InnerException ?? ex;
+            return $"[ERROR] [{inner.GetType().Name}]: {inner.Message}";
+        }
+
+        protected static string InvokeTool(string functionName, string argumentsJson, object toolsObject)
+        {
+            ArgumentNullException.ThrowIfNull(toolsObject);
+
+            var method = toolsObject.GetType().GetMethod(functionName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)
+                ?? throw new MissingMethodException($"Tool call for {functionName} failed: no such public method found on {toolsObject.GetType().Name}.");
 
             var parameters = method.GetParameters();
             var args = new object?[parameters.Length];
@@ -83,11 +143,11 @@ namespace MAKER.AI.Clients
                 }
             }
 
-            var result = method.Invoke(_toolsObject, args);
+            var result = method.Invoke(toolsObject, args);
             return result?.ToString() ?? string.Empty;
         }
 
-        protected virtual List<AIFunctionInfo> GenerateFunctionInfo(object toolsObject)
+        protected List<AIFunctionInfo> GenerateFunctionInfo(object toolsObject)
         {
             var functionInfos = new List<AIFunctionInfo>();
             Type objectType = toolsObject.GetType();
@@ -116,5 +176,8 @@ namespace MAKER.AI.Clients
 
             return functionInfos;
         }
+
+        [GeneratedRegex(@"```json\s*(.*?)\s*```", RegexOptions.Singleline)]
+        private static partial Regex JsonCodeBlockRegex();
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace MAKER.AI.Redflag
+﻿namespace MAKER.AI.Validation
 {
     public interface IAIRedFlagValidator
     {

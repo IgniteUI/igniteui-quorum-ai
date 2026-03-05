@@ -7,12 +7,12 @@ using System.Text.Json;
 
 namespace MAKER.AI.Clients
 {
-    internal class AnthropicAIClient(ExecutorConfig config, string model) : AIClientBase
+    internal sealed class AnthropicAIClient(ExecutorConfig config, string model) : AIClientBase
     {
         private readonly AnthropicClient _client = new() { APIKey = config.AIProviderKeys.Anthropic };
         private readonly Model _model = Enum.Parse<Model>(model);
 
-        protected override async Task<AIResponse?> RequestInternal(string prompt, List<AIFunctionInfo>? tools = null)
+        protected override async Task<AIResponse?> RequestInternal(string prompt, List<AIFunctionInfo>? tools = null, object? toolsObject = null, CancellationToken cancellationToken = default)
         {
             List<MessageParam> messages = [new() { Role = Role.User, Content = prompt }];
 
@@ -70,7 +70,7 @@ namespace MAKER.AI.Clients
 
                                 try
                                 {
-                                    var result = InvokeTool(toolUse.Name, inputJson);
+                                    var result = InvokeTool(toolUse.Name, inputJson, toolsObject!);
 
                                     messages.Add(new MessageParam
                                     {
@@ -84,15 +84,13 @@ namespace MAKER.AI.Clients
                                 }
                                 catch (Exception ex)
                                 {
-                                    var inner = ex.InnerException ?? ex;
                                     messages.Add(new MessageParam
                                     {
                                         Role = Role.User,
                                         Content = new MessageParamContent([new ContentBlockParam(new ToolResultBlockParam
                                         {
                                             ToolUseID = toolUse.ID,
-                                            Content = new ToolResultBlockParamContent(
-                                                $"[ERROR] [{inner.GetType().Name}]: {inner.Message}"),
+                                            Content = new ToolResultBlockParamContent(FormatToolError(ex)),
                                         })]),
                                     });
                                 }
@@ -108,7 +106,7 @@ namespace MAKER.AI.Clients
                         break;
 
                     case StopReason.MaxTokens:
-                        throw new Exception("Incomplete model output due to MaxTokens parameter or token limit exceeded.");
+                        throw new InvalidOperationException("Incomplete model output due to MaxTokens parameter or token limit exceeded.");
 
                     default:
                         throw new InvalidOperationException(request.StopReason?.ToString());

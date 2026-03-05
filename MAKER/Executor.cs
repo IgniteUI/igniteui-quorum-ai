@@ -1,62 +1,27 @@
-﻿using MAKER.AI.Clients;
+using MAKER.AI.Clients;
 using MAKER.AI.Exceptions;
 using MAKER.AI.Models;
 using MAKER.AI.Orchestrators;
-using MAKER.AI.Redflag;
+using MAKER.AI.Validation;
 using MAKER.Configuration;
 
 namespace MAKER
 {
-    public class Executor
+    public sealed class Executor : IExecutor
     {
-        private readonly ExecutorConfig _config;
         private readonly PlanningOrchestrator _planningOrchestrator;
         private readonly ExecutionOrchestrator _executionOrchestrator;
 
         public string Format { get; set; } = "plaintext";
 
         #region Events
-        public Action<IList<Step>, IList<Step>> OnStepsAdded
-        {
-            get => _planningOrchestrator.OnStepsAccepted;
-            set => _planningOrchestrator.OnStepsAccepted = value;
-        }
-
-        public Action<IList<Step>> OnStepsProposed
-        {
-            get => _planningOrchestrator.OnStepsProposed;
-            set => _planningOrchestrator.OnStepsProposed = value;
-        }
-
-        public Action<AIVoteException> OnStepsRejected
-        {
-            get => _planningOrchestrator.OnStepsRejected;
-            set => _planningOrchestrator.OnStepsRejected = value;
-        }
-
-        public Action<VoteState> OnPlanVoteChanged
-        {
-            get => _planningOrchestrator.OnVoteChanged;
-            set => _planningOrchestrator.OnVoteChanged = value;
-        }
-
-        public Action<IList<Step>, IList<Step>> OnExecutionStarted
-        {
-            get => _executionOrchestrator.OnExecutionStarted;
-            set => _executionOrchestrator.OnExecutionStarted = value;
-        }
-
-        public Action<string> OnStateChanged
-        {
-            get => _executionOrchestrator.OnStateChanged;
-            set => _executionOrchestrator.OnStateChanged = value;
-        }
-
-        public Action<VoteState> OnExecutionVoteChanged
-        {
-            get => _executionOrchestrator.OnVoteChanged;
-            set => _executionOrchestrator.OnVoteChanged = value;
-        }
+        public event Action<IList<Step>, IList<Step>>? OnStepsAdded;
+        public event Action<IList<Step>>? OnStepsProposed;
+        public event Action<AIVoteException>? OnStepsRejected;
+        public event Action<VoteState>? OnPlanVoteChanged;
+        public event Action<IList<Step>, IList<Step>>? OnExecutionStarted;
+        public event Action<string>? OnStateChanged;
+        public event Action<VoteState>? OnExecutionVoteChanged;
         #endregion
 
         public List<IAIRedFlagValidator> DefaultPlanningValidators
@@ -66,17 +31,28 @@ namespace MAKER
         }
 
         public Executor(ExecutorConfig config, string format)
+            : this(config, format, new AIClientFactory(config))
         {
-            _config = config;
+        }
+
+        public Executor(ExecutorConfig config, string format, IAIClientFactory clientFactory)
+        {
             Format = format;
 
-            var planningClient = InstantiateClient(_config.Clients.Planning);
-            var planVotingClient = InstantiateClient(_config.Clients.PlanVoting);
-            var executionClient = InstantiateClient(_config.Clients.Execution);
-            var executionVotingClient = InstantiateClient(_config.Clients.ExecutionVoting);
+            _planningOrchestrator = new PlanningOrchestrator(config,
+                clientFactory.CreateClient(config.Clients.Planning),
+                clientFactory.CreateClient(config.Clients.PlanVoting));
+            _executionOrchestrator = new ExecutionOrchestrator(config,
+                clientFactory.CreateClient(config.Clients.Execution),
+                clientFactory.CreateClient(config.Clients.ExecutionVoting));
 
-            _planningOrchestrator = new PlanningOrchestrator(_config, planningClient, planVotingClient);
-            _executionOrchestrator = new ExecutionOrchestrator(_config, executionClient, executionVotingClient);
+            _planningOrchestrator.OnStepsAccepted += (proposed, existing) => OnStepsAdded?.Invoke(proposed, existing);
+            _planningOrchestrator.OnStepsProposed += steps => OnStepsProposed?.Invoke(steps);
+            _planningOrchestrator.OnStepsRejected += ex => OnStepsRejected?.Invoke(ex);
+            _planningOrchestrator.OnVoteChanged += state => OnPlanVoteChanged?.Invoke(state);
+            _executionOrchestrator.OnExecutionStarted += (batch, completed) => OnExecutionStarted?.Invoke(batch, completed);
+            _executionOrchestrator.OnStateChanged += state => OnStateChanged?.Invoke(state);
+            _executionOrchestrator.OnVoteChanged += state => OnExecutionVoteChanged?.Invoke(state);
         }
 
         /// <summary>
@@ -89,12 +65,12 @@ namespace MAKER
         /// <param name="validators">An optional list of validators used to check for red flags in the generated steps. Each validator is applied
         /// to ensure the plan meets safety or compliance requirements.</param>
         /// <returns>A list of steps representing the generated plan.</returns>
-        public async Task<IList<Step>> Plan(string prompt, int batchSize = 2, int k = 10, IList<Step> prependSteps = null!, List<IAIRedFlagValidator> validators = null!, object? tools = null!)
+        public async Task<IList<Step>> Plan(string prompt, int batchSize = 2, int k = 10, IList<Step>? prependSteps = null, List<IAIRedFlagValidator>? validators = null, object? tools = null, CancellationToken cancellationToken = default)
         {
             if (batchSize <= 0) throw new ArgumentOutOfRangeException($"{nameof(batchSize)} must be greater than zero");
             if (k <= 0) throw new ArgumentOutOfRangeException($"{nameof(k)} must be greater than zero");
 
-            return await _planningOrchestrator.Plan(prompt, Format, batchSize, k, prependSteps, validators, tools);
+            return await _planningOrchestrator.Plan(prompt, Format, batchSize, k, prependSteps, validators, tools, cancellationToken);
         }
 
         /// <summary>
@@ -106,26 +82,12 @@ namespace MAKER
         /// <param name="k">The difference in votes required for a voting decision to be made.</param>
         /// <param name="validators">A list of validators used to check for AI-generated red flags during execution. If null, no validation is performed.</param>
         /// <returns>The resulting state of the Step execution.</returns>
-        public async Task<string> Execute(IList<Step> steps, string prompt, int batchSize = 2, int k = 10, List<IAIRedFlagValidator> validators = null!, object? tools = null!)
+        public async Task<string> Execute(IList<Step> steps, string prompt, int batchSize = 2, int k = 10, List<IAIRedFlagValidator>? validators = null, object? tools = null, CancellationToken cancellationToken = default)
         {
             if (batchSize <= 0) throw new ArgumentOutOfRangeException($"{nameof(batchSize)} must be greater than zero");
             if (k <= 0) throw new ArgumentOutOfRangeException($"{nameof(k)} must be greater than zero");
 
-            return await _executionOrchestrator.Execute(steps, prompt, Format, batchSize, k, validators, tools);
-        }
-
-        private AIClientBase InstantiateClient(ClientProviderConfig config)
-        {
-            var type = config.Provider;
-            var model = config.Model;
-
-            return type switch
-            {
-                "OpenAI" => new OpenAIClient(_config, model, priority: false),
-                "Google" => new GoogleAIClient(_config, model),
-                "Anthropic" => new AnthropicAIClient(_config, model),
-                _ => throw new NotImplementedException($"{type} IAIClient not implemented."),
-            };
+            return await _executionOrchestrator.Execute(steps, prompt, Format, batchSize, k, validators, tools, cancellationToken);
         }
     }
 }

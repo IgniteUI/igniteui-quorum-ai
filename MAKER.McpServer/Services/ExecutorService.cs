@@ -33,25 +33,25 @@ public class ExecutorService(IConfiguration configuration)
 
     private static void WireEvents(Executor executor, Action<SseEvent> emit)
     {
-        executor.OnStepsProposed = steps =>
+        executor.OnStepsProposed += steps =>
             emit(new SseEvent("steps_proposed", JsonSerializer.Serialize(steps)));
 
-        executor.OnStepsAdded = (proposed, all) =>
+        executor.OnStepsAdded += (proposed, all) =>
             emit(new SseEvent("steps_added", JsonSerializer.Serialize(new { proposed, all })));
 
-        executor.OnStepsRejected = ex =>
+        executor.OnStepsRejected += ex =>
             emit(new SseEvent("steps_rejected", JsonSerializer.Serialize(new { reasons = ex.RejectionReasons })));
 
-        executor.OnPlanVoteChanged = state =>
+        executor.OnPlanVoteChanged += state =>
             emit(new SseEvent("plan_vote", JsonSerializer.Serialize(state)));
 
-        executor.OnExecutionStarted = (batch, completed) =>
+        executor.OnExecutionStarted += (batch, completed) =>
             emit(new SseEvent("execution_started", JsonSerializer.Serialize(new { batch, completed })));
 
-        executor.OnStateChanged = state =>
+        executor.OnStateChanged += state =>
             emit(new SseEvent("state_changed", JsonSerializer.Serialize(new { state })));
 
-        executor.OnExecutionVoteChanged = state =>
+        executor.OnExecutionVoteChanged += state =>
             emit(new SseEvent("execution_vote", JsonSerializer.Serialize(state)));
     }
 

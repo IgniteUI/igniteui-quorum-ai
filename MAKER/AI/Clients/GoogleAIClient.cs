@@ -1,4 +1,4 @@
-﻿using Google.GenAI;
+using Google.GenAI;
 using Google.GenAI.Types;
 using MAKER.AI.Models;
 using MAKER.Configuration;
@@ -7,11 +7,11 @@ using System.Text.Json;
 
 namespace MAKER.AI.Clients
 {
-    internal class GoogleAIClient(ExecutorConfig config, string model) : AIClientBase
+    internal sealed class GoogleAIClient(ExecutorConfig config, string model) : AIClientBase
     {
         private readonly Client _client = new(apiKey: config.AIProviderKeys.Google);
 
-        protected override async Task<AIResponse?> RequestInternal(string prompt, List<AIFunctionInfo>? tools = null)
+        protected override async Task<AIResponse?> RequestInternal(string prompt, List<AIFunctionInfo>? tools = null, object? toolsObject = null, CancellationToken cancellationToken = default)
         {
             var contents = new List<Content>
             {
@@ -32,108 +32,107 @@ namespace MAKER.AI.Clients
             int inputTokens = 0;
             int outputTokens = 0;
 
-            try
+            GenerateContentResponse? lastResponse = null;
+            bool requiresAction = false;
+            do
             {
-                GenerateContentResponse? lastResponse = null;
-                bool requiresAction = false;
-                do
+                requiresAction = false;
+                var response = await _client.Models.GenerateContentAsync(
+                    model: model,
+                    contents: contents,
+                    config: requestConfig
+                );
+
+                lastResponse = response;
+                inputTokens += response.UsageMetadata?.PromptTokenCount ?? 0;
+                outputTokens += response.UsageMetadata?.CandidatesTokenCount ?? 0;
+
+                var candidate = response.Candidates?[0];
+                if (candidate == null) break;
+
+                switch (candidate.FinishReason)
                 {
-                    requiresAction = false;
-                    var response = await _client.Models.GenerateContentAsync(
-                        model: model,
-                        contents: contents,
-                        config: requestConfig
-                    );
+                    case FinishReason.STOP or null:
+                        {
+                            var functionCalls = candidate.Content?.Parts?
+                                .Where(p => p.FunctionCall != null)
+                                .Select(p => p.FunctionCall!)
+                                .ToList();
 
-                    lastResponse = response;
-                    inputTokens += response.UsageMetadata?.PromptTokenCount ?? 0;
-                    outputTokens += response.UsageMetadata?.CandidatesTokenCount ?? 0;
-
-                    var candidate = response.Candidates?[0];
-                    if (candidate == null) break;
-
-                    switch (candidate.FinishReason)
-                    {
-                        case FinishReason.STOP or null:
+                            if (functionCalls?.Count > 0)
                             {
-                                var functionCalls = candidate.Content?.Parts?
-                                    .Where(p => p.FunctionCall != null)
-                                    .Select(p => p.FunctionCall!)
-                                    .ToList();
+                                contents.Add(candidate.Content!);
 
-                                if (functionCalls?.Count > 0)
+                                var responseParts = new List<Part>();
+                                foreach (var call in functionCalls)
                                 {
-                                    contents.Add(candidate.Content!);
-
-                                    var responseParts = new List<Part>();
-                                    foreach (var call in functionCalls)
+                                    var argsJson = JsonSerializer.Serialize(call.Args);
+                                    string result;
+                                    try
                                     {
-                                        var argsJson = JsonSerializer.Serialize(call.Args);
-                                        string result;
-                                        try
-                                        {
-                                            result = InvokeTool(call.Name!, argsJson);
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            var inner = ex.InnerException ?? ex;
-                                            result = $"[ERROR] [{inner.GetType().Name}]: {inner.Message}";
-                                        }
-
-                                        responseParts.Add(new Part
-                                        {
-                                            FunctionResponse = new FunctionResponse
-                                            {
-                                                Name = call.Name,
-                                                Response = new Dictionary<string, object> { ["result"] = result }
-                                            }
-                                        });
-
-                                        // TODO: MCP, code exec, file search, etc
+                                        result = InvokeTool(call.Name!, argsJson, toolsObject!);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        result = FormatToolError(ex);
                                     }
 
-                                    contents.Add(new Content { Role = "user", Parts = responseParts });
-                                    requiresAction = true;
+                                    responseParts.Add(new Part
+                                    {
+                                        FunctionResponse = new FunctionResponse
+                                        {
+                                            Name = call.Name,
+                                            Response = new Dictionary<string, object> { ["result"] = result }
+                                        }
+                                    });
+
+                                    // TODO: MCP, code exec, file search, etc
                                 }
 
-                                break;
+                                contents.Add(new Content { Role = "user", Parts = responseParts });
+                                requiresAction = true;
                             }
 
-                        case FinishReason.MAX_TOKENS:
-                            throw new Exception("Incomplete model output due to MaxTokens parameter or token limit exceeded.");
+                            break;
+                        }
 
-                        default:
-                            throw new InvalidOperationException(candidate.FinishReason?.ToString());
-                    }
+                    case FinishReason.MAX_TOKENS:
+                        throw new InvalidOperationException("Incomplete model output due to MaxTokens parameter or token limit exceeded.");
 
-                } while (requiresAction);
-
-                if (lastResponse == null) return null;
-
-                var text = lastResponse.Candidates?[0]?.Content?.Parts?
-                    .FirstOrDefault(p => p.Text != null)?.Text;
-
-                return new AIResponse()
-                {
-                    Content = text,
-                    InputTokens = inputTokens,
-                    OutputTokens = outputTokens
-                };
-            }
-            catch (ServerError)
-            {
-                await Task.Delay(2000);
-                return await RequestInternal(prompt, tools);
-            }
-            catch (ClientError ex)
-            {
-                if (ex.Status == "RESOURCE_EXHAUSTED")
-                {
-                    await Task.Delay(80000);
-                    return await RequestInternal(prompt, tools);
+                    default:
+                        throw new InvalidOperationException(candidate.FinishReason?.ToString());
                 }
-                throw;
+
+            } while (requiresAction);
+
+            if (lastResponse == null) return null;
+
+            var text = lastResponse.Candidates?[0]?.Content?.Parts?
+                .FirstOrDefault(p => p.Text != null)?.Text;
+
+            return new AIResponse()
+            {
+                Content = text,
+                InputTokens = inputTokens,
+                OutputTokens = outputTokens
+            };
+        }
+
+        protected override bool IsTransientError(Exception ex, out int delayMs)
+        {
+            if (ex is ServerError)
+            {
+                delayMs = 2000;
+                return true;
             }
+
+            if (ex is ClientError clientError && clientError.Status == "RESOURCE_EXHAUSTED")
+            {
+                delayMs = 80000;
+                return true;
+            }
+
+            return base.IsTransientError(ex, out delayMs);
         }
 
         private static Tool BuildTool(List<AIFunctionInfo> functions)

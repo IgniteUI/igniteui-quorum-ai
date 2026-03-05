@@ -1,6 +1,6 @@
 ﻿namespace MAKER.AI.Models
 {
-    public class VoteState
+    public record VoteState
     {
         public required int KValue { get; init; }
 

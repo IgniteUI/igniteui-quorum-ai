@@ -2,9 +2,9 @@
 {
     public class AIFunctionParameterInfo
     {
-        public string Name { get; set; }
-        public Type ParameterType { get; set; }
-        public string Description { get; set; }
-        public bool IsRequired { get; set; }
+        public required string Name { get; init; }
+        public required Type ParameterType { get; init; }
+        public required string Description { get; init; }
+        public bool IsRequired { get; init; }
     }
 }

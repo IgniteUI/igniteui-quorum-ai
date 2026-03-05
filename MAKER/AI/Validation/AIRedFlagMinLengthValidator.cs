@@ -1,6 +1,6 @@
 ﻿using MAKER.AI.Exceptions;
 
-namespace MAKER.AI.Redflag
+namespace MAKER.AI.Validation
 {
     public class AIRedFlagMinLengthValidator(int minLength) : IAIRedFlagValidator
     {

@@ -15,30 +15,30 @@ public static class MakerApiEndpoints
     }
 
     private static Task HandlePlan(HttpContext ctx, PlanRequest req, ExecutorService svc, CancellationToken ct) =>
-        StreamSse(ctx, svc, ct, async (executor, emit) =>
+        StreamSse(ctx, svc, ct, async (executor, emit, token) =>
         {
-            var steps = await executor.Plan(req.Prompt, req.BatchSize, req.K);
+            var steps = await executor.Plan(req.Prompt, req.BatchSize, req.K, cancellationToken: token);
             emit(new SseEvent("complete", JsonSerializer.Serialize(steps)));
         });
 
     private static Task HandleExecute(HttpContext ctx, ExecuteRequest req, ExecutorService svc, CancellationToken ct) =>
-        StreamSse(ctx, svc, ct, async (executor, emit) =>
+        StreamSse(ctx, svc, ct, async (executor, emit, token) =>
         {
             var steps = JsonSerializer.Deserialize<List<Step>>(req.StepsJson)
                 ?? throw new ArgumentException("Invalid steps JSON");
 
-            var result = await executor.Execute(steps, req.Prompt, req.BatchSize, req.K);
+            var result = await executor.Execute(steps, req.Prompt, req.BatchSize, req.K, cancellationToken: token);
             emit(new SseEvent("complete", JsonSerializer.Serialize(new { result })));
         });
 
     private static Task HandlePlanAndExecute(HttpContext ctx, PlanRequest req, ExecutorService svc, CancellationToken ct) =>
-        StreamSse(ctx, svc, ct, async (executor, emit) =>
+        StreamSse(ctx, svc, ct, async (executor, emit, token) =>
         {
             emit(new SseEvent("phase", "Planning..."));
-            var steps = await executor.Plan(req.Prompt, req.BatchSize, req.K);
+            var steps = await executor.Plan(req.Prompt, req.BatchSize, req.K, cancellationToken: token);
 
             emit(new SseEvent("phase", $"Executing {steps.Count} steps..."));
-            var result = await executor.Execute(steps, req.Prompt, req.BatchSize, req.K);
+            var result = await executor.Execute(steps, req.Prompt, req.BatchSize, req.K, cancellationToken: token);
 
             emit(new SseEvent("complete", JsonSerializer.Serialize(new { steps, result })));
         });
@@ -49,7 +49,7 @@ public static class MakerApiEndpoints
         HttpContext ctx,
         ExecutorService svc,
         CancellationToken ct,
-        Func<Executor, Action<SseEvent>, Task> run)
+        Func<Executor, Action<SseEvent>, CancellationToken, Task> run)
     {
         ctx.Response.ContentType = "text/event-stream";
         ctx.Response.Headers.Append("Cache-Control", "no-cache");
@@ -65,7 +65,7 @@ public static class MakerApiEndpoints
         {
             try
             {
-                await run(executor, evt => channel.Writer.TryWrite(evt));
+                await run(executor, evt => channel.Writer.TryWrite(evt), ct);
             }
             catch (Exception ex)
             {

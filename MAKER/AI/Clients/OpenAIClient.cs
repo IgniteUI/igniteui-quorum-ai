@@ -1,4 +1,4 @@
-﻿using MAKER.AI.Models;
+using MAKER.AI.Models;
 using MAKER.Configuration;
 using OpenAI.Chat;
 
@@ -7,11 +7,11 @@ using System.Text.Json;
 #pragma warning disable OPENAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 namespace MAKER.AI.Clients
 {
-    internal class OpenAIClient(ExecutorConfig config, string model, bool priority = false) : AIClientBase
+    internal sealed class OpenAIClient(ExecutorConfig config, string model, bool priority = false) : AIClientBase
     {
         private readonly ChatClient _client = new(model: model, apiKey: config.AIProviderKeys.OpenAI);
 
-        protected override async Task<AIResponse?> RequestInternal(string prompt, List<AIFunctionInfo>? tools = null)
+        protected override async Task<AIResponse?> RequestInternal(string prompt, List<AIFunctionInfo>? tools = null, object? toolsObject = null, CancellationToken cancellationToken = default)
         {
             var opts = new ChatCompletionOptions();
 
@@ -21,7 +21,6 @@ namespace MAKER.AI.Clients
             }
 
             List<ChatMessage> messages = [new UserChatMessage(prompt)];
-
 
             if (tools != null)
             {
@@ -42,7 +41,7 @@ namespace MAKER.AI.Clients
             do
             {
                 requiresAction = false;
-                        var request = await _client.CompleteChatAsync(messages, opts);
+                var request = await _client.CompleteChatAsync(messages, opts, cancellationToken);
 
                 if (request.Value == null)
                 {
@@ -62,7 +61,7 @@ namespace MAKER.AI.Clients
                             {
                                 try
                                 {
-                                    var result = InvokeTool(toolCall.FunctionName, toolCall.FunctionArguments.ToString());
+                                    var result = InvokeTool(toolCall.FunctionName, toolCall.FunctionArguments.ToString(), toolsObject!);
 
                                     messages.Add(new ToolChatMessage(
                                         toolCall.Id,
@@ -71,10 +70,9 @@ namespace MAKER.AI.Clients
                                 }
                                 catch (Exception ex)
                                 {
-                                    var inner = ex.InnerException ?? ex;
                                     messages.Add(new ToolChatMessage(
                                         toolCall.Id,
-                                        $"[ERROR] [{inner.GetType().Name}]: {inner.Message}"
+                                        FormatToolError(ex)
                                     ));
                                 }
 
@@ -92,10 +90,10 @@ namespace MAKER.AI.Clients
                         }
 
                     case ChatFinishReason.Length:
-                        throw new Exception("Incomplete model output due to MaxTokens parameter or token limit exceeded.");
+                        throw new InvalidOperationException("Incomplete model output due to MaxTokens parameter or token limit exceeded.");
 
                     case ChatFinishReason.ContentFilter:
-                        throw new Exception("Omitted content due to a content filter flag.");
+                        throw new InvalidOperationException("Omitted content due to a content filter flag.");
 
                     case ChatFinishReason.FunctionCall:
                         throw new InvalidOperationException("Deprecated in favor of tool calls.");
@@ -151,7 +149,7 @@ namespace MAKER.AI.Clients
                 var tool = ChatTool.CreateFunctionTool(
                     functionName: function.Name,
                     functionDescription: function.Description,
-                    functionParameters: paramData ?? null
+                    functionParameters: paramData
                 );
 
                 tools.Add(tool);

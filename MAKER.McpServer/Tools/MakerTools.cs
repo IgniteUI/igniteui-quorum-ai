@@ -21,7 +21,7 @@ public class MakerTools(ExecutorService executorService)
         try
         {
             var executor = executorService.CreateWithProgress(progress);
-            var steps = await executor.Plan(prompt, batchSize, k);
+            var steps = await executor.Plan(prompt, batchSize, k, cancellationToken: cancellationToken);
             return JsonSerializer.Serialize(steps, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)
@@ -46,7 +46,7 @@ public class MakerTools(ExecutorService executorService)
                 ?? throw new ArgumentException("Invalid steps JSON");
 
             var executor = executorService.CreateWithProgress(progress);
-            return await executor.Execute(steps, prompt, batchSize, k);
+            return await executor.Execute(steps, prompt, batchSize, k, cancellationToken: cancellationToken);
         }
         catch (Exception ex)
         {
@@ -71,7 +71,7 @@ public class MakerTools(ExecutorService executorService)
             var steps = await executor.Plan(prompt, batchSize, k);
 
             progress?.Report(JsonSerializer.Serialize(new SseEvent("phase", $"Executing {steps.Count} steps...")));
-            return await executor.Execute(steps, prompt, batchSize, k);
+            return await executor.Execute(steps, prompt, batchSize, k, cancellationToken: cancellationToken);
         }
         catch (Exception ex)
         {

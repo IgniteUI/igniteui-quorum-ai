@@ -1,21 +1,19 @@
 using MAKER.AI.Clients;
+using MAKER.AI.Constants;
 using MAKER.AI.Exceptions;
 using MAKER.AI.Models;
-using MAKER.AI.Redflag;
+using MAKER.AI.Validation;
 using MAKER.Configuration;
-using MAKER.Utils;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace MAKER.AI.Orchestrators
 {
-    public class PlanningOrchestrator(ExecutorConfig config, AIClientBase planningClient, AIClientBase planVotingClient)
+    public sealed class PlanningOrchestrator(ExecutorConfig config, IAIClient planningClient, IAIClient planVotingClient) : OrchestratorBase
     {
         #region Events
-        public Action<IList<Step>, IList<Step>> OnStepsAccepted { get; set; } = delegate { };
-        public Action<IList<Step>> OnStepsProposed { get; set; } = delegate { };
-        public Action<VoteState> OnVoteChanged { get; set; } = delegate { };
-        public Action<AIVoteException> OnStepsRejected { get; set; } = delegate { };
+        public event Action<IList<Step>, IList<Step>>? OnStepsAccepted;
+        public event Action<IList<Step>>? OnStepsProposed;
+        public event Action<AIVoteException>? OnStepsRejected;
         #endregion
 
         public List<IAIRedFlagValidator> DefaultPlanningValidators { get; set; } =
@@ -23,17 +21,10 @@ namespace MAKER.AI.Orchestrators
             new AIRedFlagMinLengthValidator(100),
         ];
 
-        protected static List<IAIRedFlagValidator> VoteValidators { get; set; } =
-        [
-            new AIRedFlagMinLengthValidator(2),
-        ];
-
-        public int MaxRetries { get; set; } = 5;
-
-        public async Task<IList<Step>> Plan(string prompt, string format = "plaintext", int batchSize = 2, int k = 10, IList<Step> prependSteps = null!, List<IAIRedFlagValidator> validators = null!, object? tools = null!)
+        public async Task<IList<Step>> Plan(string prompt, string format = "plaintext", int batchSize = 2, int k = 10, IList<Step>? prependSteps = null, List<IAIRedFlagValidator>? validators = null, object? tools = null, CancellationToken cancellationToken = default)
         {
             var step = string.Empty;
-            AIVoteException lastRejection = null!;
+            AIVoteException? lastRejection = null;
             int votingRetryCount = 0;
 
 
@@ -48,27 +39,29 @@ namespace MAKER.AI.Orchestrators
                 steps.AddRange(prependSteps);
             }
 
-            while (step != "End")
+            while (step != AIResponses.End)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 try
                 {
-                    var proposedSteps = await PlanInternal(prompt, steps, batchSize, format, k, validators, lastRejection!, tools);
+                    var proposedSteps = await PlanInternal(prompt, steps, batchSize, format, k, validators, lastRejection!, tools, cancellationToken);
                     OnStepsAccepted?.Invoke(proposedSteps, [.. steps]);
 
                     foreach (var stepObj in proposedSteps)
                     {
                         step = stepObj.Task;
-                        if (!string.IsNullOrEmpty(step) && step != "End")
+                        if (!string.IsNullOrEmpty(step) && step != AIResponses.End)
                         {
                             steps.Add(stepObj);
                         }
 
-                        if (step == "End")
+                        if (step == AIResponses.End)
                         {
                             break;
                         }
                     }
-                    
+
                     // Reset retry count on successful planning
                     votingRetryCount = 0;
                 }
@@ -78,7 +71,7 @@ namespace MAKER.AI.Orchestrators
                     {
                         lastRejection = ex;
                         votingRetryCount++;
-                        
+
                         // If max retries exceeded, restart planning from scratch
                         if (votingRetryCount >= MaxRetries)
                         {
@@ -87,7 +80,7 @@ namespace MAKER.AI.Orchestrators
                             {
                                 steps.AddRange(prependSteps);
                             }
-                            lastRejection = null!;
+                            lastRejection = null;
                             votingRetryCount = 0;
                             step = string.Empty;
                         }
@@ -99,43 +92,43 @@ namespace MAKER.AI.Orchestrators
                     lastRejection = new(ex.Message, VoteCancellationReason.Rejected);
                     continue;
                 }
-                lastRejection = null!;
+                lastRejection = null;
             }
 
             return steps;
         }
 
-        public async Task<List<Step>> PlanInternal(string task, IEnumerable<Step> steps, int batchSize = 2, string format = "plaintext", int k = 5, List<IAIRedFlagValidator> validators = null!, AIVoteException lastRejection = null!, object? tools = null!)
+        internal async Task<List<Step>> PlanInternal(string task, IEnumerable<Step> steps, int batchSize = 2, string format = "plaintext", int k = 5, List<IAIRedFlagValidator>? validators = null, AIVoteException? lastRejection = null, object? tools = null, CancellationToken cancellationToken = default)
         {
-            var planTemplate = await ReadPromptTemplate(config.Instructions.Plan);
-            var planFormat = await ReadPromptTemplate(config.Instructions.PlanFormat);
-            var rules = await ReadPromptTemplate(config.Instructions.PlanRules);
+            var planTemplate = await ReadPromptTemplate(config.Instructions.Plan, cancellationToken);
+            var planFormat = await ReadPromptTemplate(config.Instructions.PlanFormat, cancellationToken);
+            var rules = await ReadPromptTemplate(config.Instructions.PlanRules, cancellationToken);
 
             var prompt = planTemplate
-                .Replace("{TASK}", task)
-                .Replace("{STEPS}", string.Join(Environment.NewLine, steps.Select(s => "- " + s.Task)))
-                .Replace("{PLAN_RULES}", rules)
-                .Replace("{OUTPUT_FORMAT}", format)
-                .Replace("{PLAN_FORMAT}", planFormat)
-                .Replace("{BATCH_SIZE}", batchSize.ToString());
+                .Replace(TemplateVariables.Task, task)
+                .Replace(TemplateVariables.Steps, string.Join(Environment.NewLine, steps.Select(s => "- " + s.Task)))
+                .Replace(TemplateVariables.PlanRules, rules)
+                .Replace(TemplateVariables.OutputFormat, format)
+                .Replace(TemplateVariables.PlanFormat, planFormat)
+                .Replace(TemplateVariables.BatchSize, batchSize.ToString());
 
             if (lastRejection != null)
             {
                 var rejectedSteps = string.Join(Environment.NewLine, lastRejection.ProposedSteps.Select(s => " - " + s.Task));
                 var rejectionReasons = string.Join(Environment.NewLine, lastRejection.RejectionReasons.Select(r => "- " + r));
-                prompt = prompt.Replace("{LAST_REJECTION}", $"The last rejected Steps were:{Environment.NewLine}{rejectedSteps}{Environment.NewLine}Reasons:{Environment.NewLine}{rejectionReasons}");
+                prompt = prompt.Replace(TemplateVariables.LastRejection, $"The last rejected Steps were:{Environment.NewLine}{rejectedSteps}{Environment.NewLine}Reasons:{Environment.NewLine}{rejectionReasons}");
             }
 
             prompt = ClearUnusedTemplateVariables(prompt);
 
             validators ??= DefaultPlanningValidators;
 
-            var responseObj = await planningClient.GuardedRequest(prompt, validators, tools);
+            var responseObj = await planningClient.GuardedRequest(prompt, validators, tools, cancellationToken);
             var response = responseObj.Content ?? throw new AIRedFlagException("Received null response from the model.");
 
-            if (response == "End")
+            if (response == AIResponses.End)
             {
-                response = JsonSerializer.Serialize(new List<Step>() { new() { Task = "End", RequiredSteps = [] } });
+                response = JsonSerializer.Serialize(new List<Step>() { new() { Task = AIResponses.End, RequiredSteps = [] } });
             }
 
             var deserializedSteps = new List<Step>();
@@ -172,7 +165,7 @@ namespace MAKER.AI.Orchestrators
             try
             {
                 OnStepsProposed?.Invoke(deserializedSteps);
-                var (vote, reasons, usage) = await VotePlanInternal(task, deserializedSteps, steps, batchSize, k);
+                var (vote, reasons, usage) = await VotePlanInternal(task, deserializedSteps, steps, batchSize, k, tools, cancellationToken);
                 if (!vote)
                 {
                     var rejection = new AIVoteException($"Proposed step was rejected by voting.", deserializedSteps, reasons);
@@ -184,7 +177,7 @@ namespace MAKER.AI.Orchestrators
             {
                 if (ex.Reason == VoteCancellationReason.Ended)
                 {
-                    return [new() { Task = "End", RequiredSteps = [] }];
+                    return [new() { Task = AIResponses.End, RequiredSteps = [] }];
                 }
                 else
                 {
@@ -195,148 +188,23 @@ namespace MAKER.AI.Orchestrators
             return deserializedSteps;
         }
 
-        public async Task<(bool, IEnumerable<string>, AIResponse)> VotePlanInternal(string task, IEnumerable<Step> proposed, IEnumerable<Step> steps, int batchSize = 2, int k = 5, object? tools = null)
+        internal async Task<(bool, IEnumerable<string>, AIResponse)> VotePlanInternal(string task, IEnumerable<Step> proposed, IEnumerable<Step> steps, int batchSize = 2, int k = 5, object? tools = null, CancellationToken cancellationToken = default)
         {
-            var voteTemplate = await ReadPromptTemplate(config.Instructions.PlanVote);
-            var planFormat = await ReadPromptTemplate(config.Instructions.PlanFormat);
-            var rules = await ReadPromptTemplate(config.Instructions.PlanRules);
+            var voteTemplate = await ReadPromptTemplate(config.Instructions.PlanVote, cancellationToken);
+            var planFormat = await ReadPromptTemplate(config.Instructions.PlanFormat, cancellationToken);
+            var rules = await ReadPromptTemplate(config.Instructions.PlanRules, cancellationToken);
 
             var prompt = voteTemplate
-                .Replace("{TASK}", task)
-                .Replace("{STEP}", string.Join(Environment.NewLine, proposed.Select(s => $"  <step>{s.Task}</step>")))
-                .Replace("{STEPS}", string.Join(Environment.NewLine, steps.Select(s => $"  <step>{s.Task}</step>")))
-                .Replace("{PLAN_RULES}", rules)
-                .Replace("{BATCH_SIZE}", batchSize.ToString())
-                .Replace("{PLAN_FORMAT}", planFormat);
+                .Replace(TemplateVariables.Task, task)
+                .Replace(TemplateVariables.Step, string.Join(Environment.NewLine, proposed.Select(s => $"  <step>{s.Task}</step>")))
+                .Replace(TemplateVariables.Steps, string.Join(Environment.NewLine, steps.Select(s => $"  <step>{s.Task}</step>")))
+                .Replace(TemplateVariables.PlanRules, rules)
+                .Replace(TemplateVariables.BatchSize, batchSize.ToString())
+                .Replace(TemplateVariables.PlanFormat, planFormat);
 
             prompt = ClearUnusedTemplateVariables(prompt);
 
-            try
-            {
-                var (vote, reasons, usage) = await this.RunVotingRound(k, prompt, planVotingClient, tools);
-                return (vote, reasons, usage);
-            }
-            catch
-            {
-                var (vote, reasons, usage) = await this.RunVotingRound(k, prompt, planVotingClient, tools);
-                return (vote, reasons, usage);
-            }
-        }
-
-        private async Task<(bool, IEnumerable<string>, AIResponse)> RunVotingRound(int k, string prompt, IAIClient client, object? tools = null)
-        {
-            int positive = 0;
-            int negative = 0;
-            int end = 0;
-
-            var reasons = new List<string>();
-
-            int inputTokens = 0;
-            int outputTokens = 0;
-
-            while (positive < negative + k && negative < positive + k && end != k)
-            {
-                end = 0;
-                if (positive + negative >= k * 4)
-                {
-                    throw new AIVoteException("Voting round exceeded maximum number of votes without reaching consensus.", VoteCancellationReason.Contentious);
-                }
-
-                var votes = GenerateVoteRequests(prompt, k, client, tools);
-                foreach (var bucket in TaskUtils.Interleaved(votes))
-                {
-                    var t = await bucket;
-                    var voteResponseObj = await t;
-
-                    inputTokens += voteResponseObj.InputTokens;
-                    outputTokens += voteResponseObj.OutputTokens;
-                    var voteResponse = voteResponseObj.Content!.ReplaceLineEndings().Trim();
-
-                    if (voteResponse != null)
-                    {
-                        if (voteResponse == "Yes")
-                        {
-                            positive++;
-                        }
-                        else if (voteResponse.StartsWith("No"))
-                        {
-                            negative++;
-                            var resp = voteResponse.ReplaceLineEndings().Split(Environment.NewLine);
-                            if (resp.Length > 1)
-                            {
-                                reasons.Add(string.Join(Environment.NewLine, resp.Skip(1)));
-                            }
-                        }
-                        else if (voteResponse == "End")
-                        {
-                            end++;
-                        }
-                        else
-                        {
-                            // Some other non-value
-                            votes.AddRange(GenerateVoteRequests(prompt, 1, client, tools));
-                            continue;
-                        }
-
-                        OnVoteChanged?.Invoke(new()
-                        {
-                            KValue = k,
-                            Votes = {
-                                { "Yes", positive },
-                                { "No", negative },
-                                { "End", end }
-                            }
-                        });
-                        if (positive >= negative + k || negative >= positive + k || end == k)
-                        {
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        // Handle unexpected response
-                        throw new Exception("Unexpected response from vote.");
-                    }
-                }
-            }
-
-            if (end == k)
-            {
-                throw new AIVoteException("Voters deemed the task finished.", VoteCancellationReason.Ended);
-            }
-
-            return (positive >= negative + k, reasons, new AIResponse
-            {
-                InputTokens = inputTokens,
-                OutputTokens = outputTokens
-            });
-        }
-
-        private List<Task<AIResponse>> GenerateVoteRequests(string prompt, int amount, IAIClient client, object? tools = null)
-        {
-            var output = new List<Task<AIResponse>>();
-            for (int i = 0; i < amount; i++)
-            {
-                output.Add(client.GuardedRequest(prompt, VoteValidators, tools));
-            }
-
-            return output;
-        }
-
-        private async Task<string> ReadPromptTemplate(string path)
-        {
-            path = Path.Combine(Directory.GetCurrentDirectory(), path);
-            if (string.IsNullOrEmpty(path) || !File.Exists(path))
-            {
-                throw new FileNotFoundException($"Prompt template file not found: {path}");
-            }
-            return await File.ReadAllTextAsync(path);
-        }
-
-        private string ClearUnusedTemplateVariables(string prompt)
-        {
-            var regex = new Regex(@"\{[A-Z_]+\}");
-            return regex.Replace(prompt, string.Empty);
+            return await RunVotingRound(k, prompt, planVotingClient, tools, cancellationToken);
         }
     }
 }

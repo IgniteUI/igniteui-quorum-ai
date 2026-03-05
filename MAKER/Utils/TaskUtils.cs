@@ -1,6 +1,6 @@
 ﻿namespace MAKER.Utils
 {
-    public class TaskUtils
+    public static class TaskUtils
     {
         public static Task<Task<T>>[] Interleaved<T>(IEnumerable<Task<T>> tasks)
         {
