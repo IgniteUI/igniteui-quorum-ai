@@ -18,9 +18,16 @@ public class MakerTools(ExecutorService executorService)
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        var executor = executorService.CreateWithProgress(progress);
-        var steps = await executor.Plan(prompt, batchSize, k);
-        return JsonSerializer.Serialize(steps, new JsonSerializerOptions { WriteIndented = true });
+        try
+        {
+            var executor = executorService.CreateWithProgress(progress);
+            var steps = await executor.Plan(prompt, batchSize, k);
+            return JsonSerializer.Serialize(steps, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return FormatError("maker_plan", ex);
+        }
     }
 
     [McpServerTool(Name = "maker_execute")]
@@ -33,11 +40,18 @@ public class MakerTools(ExecutorService executorService)
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        var steps = JsonSerializer.Deserialize<List<Step>>(stepsJson)
-            ?? throw new ArgumentException("Invalid steps JSON");
+        try
+        {
+            var steps = JsonSerializer.Deserialize<List<Step>>(stepsJson)
+                ?? throw new ArgumentException("Invalid steps JSON");
 
-        var executor = executorService.CreateWithProgress(progress);
-        return await executor.Execute(steps, prompt, batchSize, k);
+            var executor = executorService.CreateWithProgress(progress);
+            return await executor.Execute(steps, prompt, batchSize, k);
+        }
+        catch (Exception ex)
+        {
+            return FormatError("maker_execute", ex);
+        }
     }
 
     [McpServerTool(Name = "maker_plan_and_execute")]
@@ -49,12 +63,35 @@ public class MakerTools(ExecutorService executorService)
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        var executor = executorService.CreateWithProgress(progress);
+        try
+        {
+            var executor = executorService.CreateWithProgress(progress);
 
-        progress?.Report(JsonSerializer.Serialize(new SseEvent("phase", "Planning...")));
-        var steps = await executor.Plan(prompt, batchSize, k);
+            progress?.Report(JsonSerializer.Serialize(new SseEvent("phase", "Planning...")));
+            var steps = await executor.Plan(prompt, batchSize, k);
 
-        progress?.Report(JsonSerializer.Serialize(new SseEvent("phase", $"Executing {steps.Count} steps...")));
-        return await executor.Execute(steps, prompt, batchSize, k);
+            progress?.Report(JsonSerializer.Serialize(new SseEvent("phase", $"Executing {steps.Count} steps...")));
+            return await executor.Execute(steps, prompt, batchSize, k);
+        }
+        catch (Exception ex)
+        {
+            return FormatError("maker_plan_and_execute", ex);
+        }
+    }
+
+    private static string FormatError(string tool, Exception ex)
+    {
+        var messages = new List<string>();
+        var current = ex;
+        while (current != null)
+        {
+            var msg = current.Message?.Trim();
+            if (!string.IsNullOrEmpty(msg) && !messages.Contains(msg))
+                messages.Add(msg);
+            current = current.InnerException;
+        }
+
+        var detail = string.Join(" → ", messages);
+        return $"MAKER ERROR [{tool}]: {detail}";
     }
 }
