@@ -209,12 +209,15 @@ The framework balances speed and reliability through these tunable parameters, a
 
 ## Use as MCP Server
 
-The easiest way to use MAKER is via the published npm package, which runs the MCP server in any MCP-compatible client (Claude Desktop, VS Code, Cursor, etc.) with no .NET installation required.
+The easiest way to use MAKER is via the published npm package (`@igniteui/maker-mcp`), which runs the MCP server in any MCP-compatible client (Claude Desktop, VS Code, Cursor, etc.) with no .NET installation required. The native binary (~50 MB) is downloaded and cached on first run.
 
 ### Prerequisites
 
 - **Node.js ≥ 18**
-- At least one AI provider API key (OpenAI, Anthropic, or Google AI)
+- At least one AI provider API key:
+  - [OpenAI](https://platform.openai.com/api-keys)
+  - [Anthropic](https://console.anthropic.com/settings/keys)
+  - [Google AI](https://aistudio.google.com/app/apikey)
 - A **GitHub Personal Access Token** with `read:packages` scope ([create one here](https://github.com/settings/tokens))
 
 ### One-time registry setup
@@ -231,9 +234,22 @@ Then open `~/.npmrc` (Windows: `%USERPROFILE%\.npmrc`) and add:
 //npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT
 ```
 
-### Claude Desktop
+You can also place these settings in a project-level `.npmrc` file:
 
-Open `%APPDATA%\Claude\claude_desktop_config.json` (Windows) or `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) and add:
+```ini
+@igniteui:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+```
+
+### Installation
+
+#### Claude Desktop
+
+1. Open your Claude Desktop config file:
+   - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+   - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+2. Add the `maker` server to the `mcpServers` block:
 
 ```json
 {
@@ -249,17 +265,16 @@ Open `%APPDATA%\Claude\claude_desktop_config.json` (Windows) or `~/Library/Appli
 }
 ```
 
-Fully quit and relaunch Claude Desktop. On first start, the native binary (~50 MB) is downloaded and cached — subsequent starts are instant.
+3. Restart Claude Desktop. The first startup downloads the binary for your platform (~30 s on a typical connection).
 
-### VS Code (GitHub Copilot)
+#### VS Code (GitHub Copilot)
 
-Create `.vscode/mcp.json` in your workspace:
+Add to your `.vscode/mcp.json` (workspace) or user MCP settings:
 
 ```json
 {
   "servers": {
     "maker": {
-      "type": "stdio",
       "command": "npx",
       "args": ["-y", "@igniteui/maker-mcp", "--stdio"],
       "env": {
@@ -272,7 +287,76 @@ Create `.vscode/mcp.json` in your workspace:
 
 Switch Copilot Chat to **Agent** mode and click the 🔧 tools icon to confirm `maker_plan`, `maker_execute`, and `maker_plan_and_execute` are listed.
 
-### Available tools
+#### Other MCP Clients
+
+Any client that supports the MCP STDIO transport can use:
+
+```bash
+npx -y @igniteui/maker-mcp --stdio
+```
+
+Pass API keys as environment variables (see Configuration below).
+
+### Configuration
+
+All configuration is supplied through **environment variables**. The naming convention uses double-underscore (`__`) as the section separator.
+
+#### AI Provider Keys
+
+| Environment Variable | Description |
+|---|---|
+| `Executor__AIProviderKeys__OpenAI` | OpenAI API key |
+| `Executor__AIProviderKeys__Anthropic` | Anthropic API key |
+| `Executor__AIProviderKeys__Google` | Google AI API key |
+
+You only need to set keys for the providers you actually use.
+
+#### Model Selection
+
+Each of the four internal clients can target a different provider and model:
+
+| Environment Variable | Default | Description |
+|---|---|---|
+| `Executor__Clients__Planning__Provider` | `OpenAI` | Provider for step proposal |
+| `Executor__Clients__Planning__Model` | `gpt-5.1` | Model for step proposal |
+| `Executor__Clients__PlanVoting__Provider` | `OpenAI` | Provider for plan voting |
+| `Executor__Clients__PlanVoting__Model` | `gpt-5.1` | Model for plan voting |
+| `Executor__Clients__Execution__Provider` | `OpenAI` | Provider for step execution |
+| `Executor__Clients__Execution__Model` | `gpt-5.1` | Model for step execution |
+| `Executor__Clients__ExecutionVoting__Provider` | `OpenAI` | Provider for execution voting |
+| `Executor__Clients__ExecutionVoting__Model` | `gpt-5.1` | Model for execution voting |
+
+Valid `Provider` values: `OpenAI`, `Anthropic`, `Google`.
+
+**Example — mix providers to balance cost and quality:**
+
+```json
+"env": {
+  "Executor__AIProviderKeys__OpenAI":    "<openai-key>",
+  "Executor__AIProviderKeys__Anthropic": "<anthropic-key>",
+  "Executor__Clients__Planning__Provider":        "Anthropic",
+  "Executor__Clients__Planning__Model":           "claude-opus-4-5",
+  "Executor__Clients__PlanVoting__Provider":      "OpenAI",
+  "Executor__Clients__PlanVoting__Model":         "gpt-4.1-mini",
+  "Executor__Clients__Execution__Provider":       "Anthropic",
+  "Executor__Clients__Execution__Model":          "claude-opus-4-5",
+  "Executor__Clients__ExecutionVoting__Provider": "OpenAI",
+  "Executor__Clients__ExecutionVoting__Model":    "gpt-4.1-mini"
+}
+```
+
+#### Tuning Parameters
+
+Each MCP tool call accepts optional parameters to control execution behavior:
+
+| Parameter | Default | Description |
+|---|---|---|
+| `batchSize` | `2` | Number of steps proposed/executed per round. Higher values (5-10) mean fewer rounds and faster execution but larger prompts and less granular control. Lower values (1-2) provide more control but slower execution. |
+| `k` | `10` | Voting consensus threshold — the margin by which one outcome must lead to win the vote. Higher values (15-20) require stronger agreement, using more tokens but increasing confidence. Lower values (3-5) enable faster decisions with less agreement. |
+
+These parameters are specified in natural language when calling the tools (see examples below).
+
+### Available MCP Tools
 
 | Tool | Description |
 |---|---|
@@ -280,9 +364,148 @@ Switch Copilot Chat to **Agent** mode and click the 🔧 tools icon to confirm `
 | `maker_execute` | Execute a step list produced by `maker_plan` |
 | `maker_plan_and_execute` | Plan and execute in one call with live progress |
 
-For full configuration options see the [npm package README](MAKER.Npm/README.md). Notable things you can tune:
+#### maker_plan
 
-- **Mix AI providers per role** — use Claude for planning and GPT-4o-mini for voting to balance quality and cost
-- **Model selection** — independently configure which model handles Planning, PlanVoting, Execution, and ExecutionVoting
-- **Consensus threshold (`k`)** — raise it for more conservative, token-heavy decisions; lower it for faster, lighter tasks
-- **Batch size** — control how many steps are proposed or executed per round
+Decomposes a task into a validated, ordered list of steps without executing them. Returns a JSON array of `Step` objects.
+
+**Parameters**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `prompt` | `string` | — | The task or goal to plan |
+| `batchSize` | `integer` | `2` | Steps proposed per voting round |
+| `k` | `integer` | `10` | Consensus threshold |
+
+**Returns** — a JSON array:
+
+```json
+[
+  {
+    "task": "Analyse the existing component API surface",
+    "requiredSteps": [],
+    "requiresFormat": false,
+    "extraContext": ""
+  },
+  {
+    "task": "Identify breaking changes relative to the previous major version",
+    "requiredSteps": [0],
+    "requiresFormat": false,
+    "extraContext": ""
+  }
+]
+```
+
+#### maker_execute
+
+Executes a step list produced by `maker_plan`. Each batch is validated by the voting system before the state is advanced.
+
+**Parameters**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `stepsJson` | `string` | — | JSON array from `maker_plan` |
+| `prompt` | `string` | — | The original task (provides context) |
+| `batchSize` | `integer` | `2` | Steps executed per round |
+| `k` | `integer` | `10` | Consensus threshold |
+
+**Returns** — the final accumulated result as a string.
+
+#### maker_plan_and_execute
+
+Convenience tool that runs both phases in a single call. Streaming progress events are sent between phases.
+
+**Parameters**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `prompt` | `string` | — | The task or goal |
+| `batchSize` | `integer` | `2` | Steps per round (planning and execution) |
+| `k` | `integer` | `10` | Consensus threshold |
+
+**Returns** — the final accumulated result as a string.
+
+### Usage Examples
+
+#### Simple one-shot task (default settings)
+
+Ask your MCP client (e.g. Claude):
+
+> Use maker_plan_and_execute to write a detailed comparison of REST vs GraphQL for a technical blog post.
+
+This uses the defaults: `batchSize=2` and `k=10`.
+
+#### Inspect the plan before executing
+
+> 1. Use maker_plan to create a plan for migrating a PostgreSQL schema to a multi-tenant design.
+> 2. Show me the steps.
+> 3. Use maker_execute with those steps to carry out the migration script.
+
+#### Fast execution with larger batches
+
+For faster execution at the cost of less granular control:
+
+> Use maker_plan_and_execute with batchSize=5 and k=10 to generate unit tests for my authentication module.
+
+#### High-confidence execution with stricter consensus
+
+For critical tasks requiring maximum confidence:
+
+> Use maker_plan_and_execute with batchSize=2 and k=15 to review this smart contract for security vulnerabilities.
+
+#### Low-cost exploratory task
+
+For quick prototyping or low-stakes tasks, reduce both parameters to minimize token usage:
+
+> Use maker_plan_and_execute with batchSize=3 and k=3 to draft a project README for a Node.js CLI tool.
+
+### Caching
+
+The native binary is cached after the first download so subsequent starts are instant.
+
+| Platform | Default cache location |
+|---|---|
+| Windows | `%LOCALAPPDATA%\maker-mcp\{version}\{rid}\` |
+| macOS / Linux | `~/.cache/maker-mcp/{version}/{rid}/` |
+
+Override with the `MAKER_MCP_CACHE` environment variable:
+
+```json
+"env": {
+  "MAKER_MCP_CACHE": "/opt/maker-mcp-cache"
+}
+```
+
+To force a re-download, delete the cache directory and restart your MCP client.
+
+### Supported Platforms
+
+| Platform | Architecture | RID |
+|---|---|---|
+| Windows | x64 | `win-x64` |
+| macOS | x64 (Intel) | `osx-x64` |
+| macOS | arm64 (Apple Silicon) | `osx-arm64` |
+| Linux | x64 | `linux-x64` |
+
+### Troubleshooting
+
+**macOS quarantine warning**
+
+If macOS blocks the binary after download, remove the quarantine attribute:
+
+```bash
+xattr -d com.apple.quarantine ~/.cache/maker-mcp/<version>/osx-arm64/maker-mcp
+```
+
+**Binary not found / HTTP error on first run**
+
+The bootstrap script downloads from GitHub Releases. Make sure the version in `package.json` has a corresponding GitHub Release with the platform tarballs attached. Check your network/proxy settings if the download fails.
+
+**All votes reject every proposal**
+
+- Verify your API key is valid and has sufficient quota.
+- Confirm the chosen model name is correct for the selected provider.
+- Try lowering `k` to `3` to make consensus easier to reach while debugging.
+
+**`Unsupported platform` error**
+
+Only the four RIDs listed above are supported. ARM Linux is not currently packaged. Open an issue at [github.com/IgniteUI/MAKER](https://github.com/IgniteUI/MAKER) to request additional platforms.
