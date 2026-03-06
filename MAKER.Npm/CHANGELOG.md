@@ -11,11 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.0] - 2026-01-01
+## [1.0.0-alpha.1] - 2026-03-06
 
 ### Added
 
-- Initial release of `@igniteui/maker-mcp`.
+- Initial alpha release of `@igniteui/maker-mcp`.
 - Bootstrap script (`bin/maker-mcp.js`) that downloads the self-contained .NET 8 binary from GitHub Releases on first run and caches it locally.
 - Platform support: `win-x64`, `osx-x64`, `osx-arm64`, `linux-x64`.
 - Configurable cache location via `MAKER_MCP_CACHE` environment variable.
@@ -28,5 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for OpenAI, Anthropic, and Google AI providers, independently selectable per internal client (Planning, PlanVoting, Execution, ExecutionVoting).
 - All configuration via environment variables using `__` as the section separator (e.g. `Executor__AIProviderKeys__OpenAI`).
 
-[Unreleased]: https://github.com/IgniteUI/MAKER/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/IgniteUI/MAKER/releases/tag/v1.0.0
+---
+
+## [1.0.0] - unreleased
