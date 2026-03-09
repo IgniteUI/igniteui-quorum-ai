@@ -117,7 +117,7 @@ jobs:
         
   # ── Publish npm package to npmjs ─────────────────────────────────
   publish-npmjs:
-    name: Publish to GitHub Packages
+    name: Publish to NpmJS.org
     needs: release
     runs-on: ubuntu-latest
     permissions:
@@ -137,7 +137,7 @@ jobs:
       - name: Set version
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          npm version "$VERSION" --no-git-tag-version
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
         working-directory: MAKER.Npm
 
       - name: Update registry in package.json
