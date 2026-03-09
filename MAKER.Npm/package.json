@@ -12,7 +12,7 @@
   "scripts": {
     "test": "node test/prepublish.test.js",
     "prepublishOnly": "npm test",
-    "prepack": "copy ..\\README.md .\\README.md"
+    "prepack": "node -e \"require('fs').copyFileSync('../README.md', 'README.md')\""
   },
   "engines": {
     "node": ">=18"
