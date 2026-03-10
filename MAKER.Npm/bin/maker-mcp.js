@@ -18,7 +18,7 @@ const path     = require('path');
 const os       = require('os');
 const { execSync, spawn } = require('child_process');
 
-const GITHUB_REPO = 'IgniteUI/MAKER';
+const GITHUB_REPO = 'IgniteUI/igniteui-quorum-ai';
 const VERSION     = require('../package.json').version;
 
 // ── Platform detection ──────────────────────────────────────────────────────
@@ -102,7 +102,7 @@ async function ensureBinary(rid) {
   if (fs.existsSync(binaryPath)) return binaryPath;
 
   const archiveName = `maker-mcp-${rid}.tar.gz`;
-  const downloadUrl = `https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/${archiveName}`;
+  const downloadUrl = `https://github.com/${}/releases/download/v${VERSION}/${archiveName}`;
   const tempFile    = path.join(os.tmpdir(), `${archiveName}.${Date.now()}.tmp`);
 
   process.stderr.write(`[maker-mcp] First run — downloading v${VERSION} for ${rid}...\n`);
