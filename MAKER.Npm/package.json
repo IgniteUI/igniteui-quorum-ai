@@ -1,5 +1,5 @@
 {
-  "name": "@igniteui/maker-mcp",
+  "name": "igniteui-quorum-ai",
   "version": "1.0.0",
   "description": "MAKER — Maximal Agentic decomposition, first-to-ahead-by-K Error correction, Red-flagging. MCP server for AI planning and execution.",
   "bin": {
