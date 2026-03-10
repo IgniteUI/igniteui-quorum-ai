@@ -7,12 +7,13 @@
   },
   "files": [
     "bin/maker-mcp.js",
-    "README.md",
     "CHANGELOG.md"
   ],
   "scripts": {
     "test": "node test/prepublish.test.js",
-    "prepublishOnly": "npm test"
+    "prepublishOnly": "npm test",
+    "prepack": "node -e \"require('fs').copyFileSync('../README.md', 'README.md')\"",
+    "postpack": "node -e \"try{require('fs').unlinkSync('README.md')}catch(e){}\""
   },
   "engines": {
     "node": ">=18"

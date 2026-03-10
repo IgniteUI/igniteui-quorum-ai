@@ -108,12 +108,6 @@ jobs:
         working-directory: MAKER.Npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Update registry in package.json
-        run: |
-          npm pkg set publishConfig.registry=https://registry.npmjs.org/
-        working-directory: MAKER.Npm
-
         
   # ── Publish npm package to npmjs ─────────────────────────────────
   publish-npmjs:
@@ -130,9 +124,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          registry-url: 'https://npm.pkg.github.com'
+          registry-url: 'https://registry.npmjs.org/'
           scope: '@igniteui'
-
+          
       # Sync package.json version with the git tag (strips the 'v' prefix)
       - name: Set version
         run: |
@@ -144,6 +138,7 @@ jobs:
         run: |
           npm pkg set publishConfig.registry=https://registry.npmjs.org/
         working-directory: MAKER.Npm
+        
       - name: Publish
         run: npm publish
         working-directory: MAKER.Npm
