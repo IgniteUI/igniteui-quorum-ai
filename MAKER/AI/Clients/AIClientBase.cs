@@ -2,6 +2,8 @@
 using MAKER.AI.Exceptions;
 using MAKER.AI.Models;
 using MAKER.AI.Validation;
+using Microsoft.Extensions.AI;
+using ModelContextProtocol.Client;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -81,7 +83,74 @@ namespace MAKER.AI.Clients
             }
         }
 
-        protected abstract Task<AIResponse?> RequestInternal(string prompt, List<AIFunctionInfo>? tools = null, object? toolsObject = null, List<MCPServerInfo>? mcpServers = null, CancellationToken cancellationToken = default);
+        protected abstract string Model { get; }
+
+        protected abstract IChatClient GetClient();
+
+        protected virtual IEnumerable<AITool> GetAdditionalTools() => [];
+
+        protected virtual async Task<AIResponse?> RequestInternal(string prompt, List<AIFunctionInfo>? tools = null, object? toolsObject = null, List<MCPServerInfo>? mcpServers = null, CancellationToken cancellationToken = default)
+        {
+            int inputTokens = 0;
+            int outputTokens = 0;
+
+            List<AITool> aiTools = [];
+
+            foreach (var server in mcpServers ?? [])
+            {
+                McpClient mcpClient = await McpClient.CreateAsync(
+                    new HttpClientTransport(new() { Endpoint = server.Url, AdditionalHeaders = server.ApiKey != null ? new Dictionary<string, string>() { ["Authorization"] = "Bearer " + server.ApiKey } : null }),
+                    new()
+                    {
+                        ClientInfo = new()
+                        {
+                            Name = server.Name,
+                            Description = server.Description,
+                            Version = "1.0",
+                        },
+
+                    },
+                    cancellationToken: cancellationToken
+                );
+                aiTools.AddRange(await mcpClient.ListToolsAsync(cancellationToken: cancellationToken));
+            }
+
+            foreach (var tool in tools ?? [])
+            {
+                aiTools.Add(AIFunctionFactory.Create(tool.Info, toolsObject, tool.Name, tool.Description));
+            }
+
+            aiTools.AddRange(GetAdditionalTools());
+
+            ChatOptions opts = new()
+            {
+                Tools = [.. aiTools],
+                ModelId = Model,
+                AllowMultipleToolCalls = true,
+                ToolMode = ChatToolMode.Auto,
+            };
+
+            var client = new ChatClientBuilder(GetClient()).UseFunctionInvocation().Build();
+
+            var resp = await client.GetResponseAsync(prompt, opts, cancellationToken);
+
+            if (resp == null || string.IsNullOrEmpty(resp.Text))
+            {
+                return null;
+            }
+
+            opts.ConversationId = resp.ConversationId;
+
+            inputTokens += (int)(resp.Usage?.InputTokenCount ?? 0);
+            outputTokens += (int)(resp.Usage?.OutputTokenCount ?? 0);
+
+            return new AIResponse()
+            {
+                Content = resp.Text,
+                InputTokens = inputTokens,
+                OutputTokens = outputTokens
+            };
+        }
 
         protected static string FormatToolError(Exception ex)
         {
