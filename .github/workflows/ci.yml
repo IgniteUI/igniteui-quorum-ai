@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build-and-test:
+    name: Build ${{ matrix.rid }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+            binary: MAKER.McpServer
+          - os: windows-latest
+            rid: win-x64
+            binary: MAKER.McpServer.exe
+          - os: macos-latest
+            rid: osx-x64
+            binary: MAKER.McpServer
+          - os: macos-latest
+            rid: osx-arm64
+            binary: MAKER.McpServer
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish & package
+        shell: bash
+        run: |
+          dotnet publish MAKER.McpServer/MAKER.McpServer.csproj \
+            -c Release \
+            -r ${{ matrix.rid }} \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:DebugType=none \
+            -o ./dist
+
+          # Rename to a consistent binary name
+          if [[ "${{ matrix.rid }}" == win-* ]]; then
+            mv ./dist/${{ matrix.binary }} ./dist/maker-mcp.exe
+          else
+            mv ./dist/${{ matrix.binary }} ./dist/maker-mcp
+            chmod +x ./dist/maker-mcp
+          fi
+
+          # Bundle binary + appsettings + instruction files into a tarball
+          tar -czf maker-mcp-${{ matrix.rid }}.tar.gz -C ./dist .
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://npm.pkg.github.com'
+
+      # Sync package.json version with the git tag (strips the 'v' prefix)
+      - name: Set version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+        working-directory: MAKER.Npm
+
+      - name: npm test
+        run: npm test
+          fi
+        working-directory: MAKER.Npm
