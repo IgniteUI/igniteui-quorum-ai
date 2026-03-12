@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Threading.Channels;
+using MAKER.AI.Models;
 using MAKER.Configuration;
 
 namespace MAKER.McpServer.Services;
@@ -8,7 +9,47 @@ public record SseEvent(string Type, string Data);
 
 public class ExecutorService(IConfiguration configuration)
 {
-    public Executor Create() => new(BuildConfig(), GetFormat());
+    private List<MCPServerInfo>? _mcpServers;
+    private string? _format;
+    private readonly object _lock = new();
+
+    public List<MCPServerInfo> GetMcpServers()
+    {
+        lock (_lock)
+        {
+            _mcpServers ??= BuildConfig().McpServers;
+            return [.. _mcpServers];
+        }
+    }
+
+    public void AddMcpServer(MCPServerInfo server)
+    {
+        lock (_lock)
+        {
+            _mcpServers ??= BuildConfig().McpServers;
+            _mcpServers.Add(server);
+        }
+    }
+
+    public bool RemoveMcpServer(string name)
+    {
+        lock (_lock)
+        {
+            _mcpServers ??= BuildConfig().McpServers;
+            return _mcpServers.RemoveAll(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase)) > 0;
+        }
+    }
+
+    public Executor Create()
+    {
+        var config = BuildConfig();
+        lock (_lock)
+        {
+            if (_mcpServers != null)
+                config.McpServers = [.. _mcpServers];
+        }
+        return new(config, GetFormat());
+    }
 
     public Executor CreateWithSseEvents(ChannelWriter<SseEvent> writer)
     {
@@ -25,7 +66,32 @@ public class ExecutorService(IConfiguration configuration)
         return executor;
     }
 
+    public string GetConfiguredFormat()
+    {
+        lock (_lock)
+        {
+            return _format ?? GetDefaultFormat();
+        }
+    }
+
+    public void SetFormat(string format)
+    {
+        lock (_lock)
+        {
+            _format = string.IsNullOrWhiteSpace(format) ? null : format.Trim();
+        }
+    }
+
     private string GetFormat()
+    {
+        lock (_lock)
+        {
+            if (_format != null) return _format;
+        }
+        return GetDefaultFormat();
+    }
+
+    private string GetDefaultFormat()
     {
         var value = configuration.GetValue<string>("Executor:Format")?.Trim();
         return string.IsNullOrWhiteSpace(value) ? "plaintext" : value;

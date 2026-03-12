@@ -18,6 +18,7 @@ Steps should NOT repeat. Reject anything containing repeated steps.
 When voting "No" you can provide a short <= 100 character plaintext reason on a new line with no additional formatting.
 "Yes" and "End" need to be verbatim with no other output.
 You can ONLY pick ONE option. Yes, No, or End.
+Do not vote End if the proposed step is to End - Vote Yes instead if you think that the plan is complete.
 
 Ensure that ALL following rules are followed for the proposed new step(s):
 {PLAN_RULES}

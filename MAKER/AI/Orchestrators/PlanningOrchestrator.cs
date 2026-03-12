@@ -46,7 +46,6 @@ namespace MAKER.AI.Orchestrators
                 try
                 {
                     var proposedSteps = await PlanInternal(prompt, steps, batchSize, format, k, validators, lastRejection!, tools, mcpServers, cancellationToken);
-                    OnStepsAccepted?.Invoke(proposedSteps, [.. steps]);
 
                     foreach (var stepObj in proposedSteps)
                     {
@@ -62,6 +61,7 @@ namespace MAKER.AI.Orchestrators
                         }
                     }
 
+                    OnStepsAccepted?.Invoke(proposedSteps, [.. steps]);
                     // Reset retry count on successful planning
                     votingRetryCount = 0;
                 }

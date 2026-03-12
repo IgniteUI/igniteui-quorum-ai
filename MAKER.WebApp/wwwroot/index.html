@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MAKER</title>
+  <title>Quorum</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -11,9 +11,9 @@
   <header class="header">
     <div class="header__brand">
       <span class="header__logo">⚙</span>
-      <span class="header__title">MAKER</span>
+      <span class="header__title">Quorum</span>
     </div>
-    <p class="header__subtitle">Maximal Agentic decomposition · first-to-ahead-by-<em>K</em> Error correction · Red-flagging</p>
+    <p class="header__subtitle">Consensus-driven AI orchestration · Task decomposition · First-to-ahead-by-<em>K</em> voting · Red-flag validation</p>
   </header>
 
   <div class="workspace">
@@ -37,6 +37,11 @@
         </div>
       </div>
 
+      <div class="format-row">
+        <label class="field-label" for="formatSelect">Output format</label>
+        <textarea id="formatSelect" class="format-input" placeholder="e.g. plaintext, json, markdown…" rows="2">plaintext</textarea>
+      </div>
+
       <div class="actions">
         <button id="planBtn" class="btn btn--primary">Plan</button>
         <button id="executeBtn" class="btn btn--secondary" disabled>Execute</button>
@@ -44,6 +49,25 @@
       </div>
 
       <div id="status" class="status"></div>
+
+      <!-- MCP Servers configuration -->
+      <div class="mcp-section">
+        <div class="mcp-section__header">
+          <label class="field-label">MCP Servers</label>
+          <span id="mcpCount" class="badge"></span>
+          <button id="mcpToggleBtn" class="mcp-toggle" title="Add server">+</button>
+        </div>
+
+        <div id="mcpForm" class="mcp-form" hidden>
+          <input id="mcpName"   class="mcp-input" placeholder="Name" />
+          <input id="mcpUrl"    class="mcp-input" placeholder="URL (e.g. http://localhost:3001)" />
+          <input id="mcpDesc"   class="mcp-input" placeholder="Description (optional)" />
+          <input id="mcpApiKey" class="mcp-input" type="password" placeholder="API Key (optional)" />
+          <button id="mcpAddBtn" class="btn btn--primary btn--sm">Add</button>
+        </div>
+
+        <div id="mcpList" class="mcp-list"></div>
+      </div>
 
     </aside>
 

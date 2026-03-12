@@ -9,6 +9,31 @@ let API_BASE = ''; // set by init() from /api/config
 let currentSteps = null;      // steps produced by the last Plan call
 let currentController = null; // AbortController for the in-flight request
 
+// ── Local storage ──────────────────────────────────────────────────────────
+const LS_KEY = 'maker-settings';
+
+function saveSettings() {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      prompt:     promptEl.value,
+      batchSize:  parseInt(batchSizeEl.value, 10),
+      k:          parseInt(kEl.value, 10),
+      format:     formatEl.value,
+      mcpServers: cachedMcpServers
+    }));
+  } catch { /* quota errors, private mode, etc. */ }
+}
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
+let cachedMcpServers = [];
+
 // ── DOM refs ───────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
@@ -25,10 +50,109 @@ const stepsEl       = $('steps');
 const stepCountEl   = $('stepCount');
 const resultEl      = $('result');
 const feedEl        = $('feed');
+const formatEl      = $('formatSelect');
+
+const mcpToggleBtn  = $('mcpToggleBtn');
+const mcpForm       = $('mcpForm');
+const mcpNameEl     = $('mcpName');
+const mcpUrlEl      = $('mcpUrl');
+const mcpDescEl     = $('mcpDesc');
+const mcpApiKeyEl   = $('mcpApiKey');
+const mcpAddBtn     = $('mcpAddBtn');
+const mcpListEl     = $('mcpList');
+const mcpCountEl    = $('mcpCount');
 
 // ── Slider labels ──────────────────────────────────────────────────────────
-batchSizeEl.addEventListener('input', () => batchSizeVal.textContent = batchSizeEl.value);
-kEl.addEventListener('input', () => kVal.textContent = kEl.value);
+batchSizeEl.addEventListener('input', () => { batchSizeVal.textContent = batchSizeEl.value; saveSettings(); });
+kEl.addEventListener('input', () => { kVal.textContent = kEl.value; saveSettings(); });
+promptEl.addEventListener('input', saveSettings);
+formatEl.addEventListener('input', () => { saveSettings(); syncFormat(); });
+
+async function syncFormat() {
+  try {
+    await fetch(`${API_BASE}/api/format`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ format: formatEl.value })
+    });
+  } catch { /* best-effort */ }
+}
+
+// ── MCP Servers ────────────────────────────────────────────────────────────
+mcpToggleBtn.addEventListener('click', () => {
+  mcpForm.hidden = !mcpForm.hidden;
+  mcpToggleBtn.textContent = mcpForm.hidden ? '+' : '−';
+});
+
+mcpAddBtn.addEventListener('click', addMcpServer);
+
+async function loadMcpServers() {
+  try {
+    const res = await fetch(`${API_BASE}/api/mcp-servers`);
+    if (!res.ok) return;
+    renderMcpServers(await res.json());
+  } catch { /* silently ignore on load */ }
+}
+
+async function addMcpServer() {
+  const name = mcpNameEl.value.trim();
+  const url  = mcpUrlEl.value.trim();
+  if (!name || !url) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/mcp-servers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        url,
+        description: mcpDescEl.value.trim() || null,
+        apiKey: mcpApiKeyEl.value.trim() || null
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      showToast(err?.message ?? 'Failed to add server', 'error');
+      return;
+    }
+    renderMcpServers(await res.json());
+    mcpNameEl.value = mcpUrlEl.value = mcpDescEl.value = mcpApiKeyEl.value = '';
+    mcpForm.hidden = true;
+    mcpToggleBtn.textContent = '+';
+  } catch (err) {
+    showToast(`Failed to add server: ${err.message}`, 'error');
+  }
+}
+
+async function removeMcpServer(name) {
+  try {
+    const res = await fetch(`${API_BASE}/api/mcp-servers/${encodeURIComponent(name)}`, { method: 'DELETE' });
+    if (!res.ok) return;
+    renderMcpServers(await res.json());
+  } catch (err) {
+    showToast(`Failed to remove server: ${err.message}`, 'error');
+  }
+}
+
+function renderMcpServers(servers) {
+cachedMcpServers = servers;
+saveSettings();
+mcpListEl.innerHTML = '';
+mcpCountEl.textContent = servers.length || '';
+servers.forEach(s => {
+    const el = document.createElement('div');
+    el.className = 'mcp-item';
+    el.innerHTML = `
+      <div class="mcp-item__info">
+        <span class="mcp-item__name">${escHtml(s.Name ?? s.name)}</span>
+        <span class="mcp-item__url">${escHtml(String(s.Url ?? s.url))}</span>
+      </div>
+      <button class="mcp-item__remove" title="Remove">✕</button>
+    `;
+    el.querySelector('.mcp-item__remove').addEventListener('click', () => removeMcpServer(s.Name ?? s.name));
+    mcpListEl.appendChild(el);
+  });
+}
 
 // ── Button handlers ────────────────────────────────────────────────────────
 planBtn.addEventListener('click',    () => run(doPlan));
@@ -358,6 +482,15 @@ function escHtml(str) {
 
 // ── Init ───────────────────────────────────────────────────────────────────
 async function init() {
+  // Restore saved settings into the DOM before anything else
+  const saved = loadSettings();
+  if (saved) {
+    if (saved.prompt != null)    promptEl.value    = saved.prompt;
+    if (saved.batchSize != null) { batchSizeEl.value = saved.batchSize; batchSizeVal.textContent = saved.batchSize; }
+    if (saved.k != null)         { kEl.value = saved.k; kVal.textContent = saved.k; }
+    if (saved.format != null)    formatEl.value = saved.format;
+  }
+
   setRunning(true);
   setStatus('Loading config…', 'active');
   try {
@@ -366,6 +499,27 @@ async function init() {
     const config = await res.json();
     API_BASE = config.mcpServerUrl ?? 'http://localhost:5000';
     setStatus('', '');
+    await syncFormat();
+    await loadMcpServers();
+
+    // If the server returned no MCP servers but we have cached ones, re-sync them
+    if (cachedMcpServers.length === 0 && saved?.mcpServers?.length) {
+      for (const s of saved.mcpServers) {
+        try {
+          const r = await fetch(`${API_BASE}/api/mcp-servers`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name:        s.Name ?? s.name,
+              url:         String(s.Url ?? s.url),
+              description: s.Description ?? s.description ?? null,
+              apiKey:      s.ApiKey ?? s.apiKey ?? null
+            })
+          });
+          if (r.ok) renderMcpServers(await r.json());
+        } catch { /* best-effort */ }
+      }
+    }
   } catch (err) {
     setStatus(`Failed to load config: ${err.message}`, 'error');
     return; // leave buttons disabled

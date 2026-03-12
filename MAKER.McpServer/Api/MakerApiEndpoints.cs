@@ -12,6 +12,13 @@ public static class MakerApiEndpoints
         app.MapPost("/api/plan", HandlePlan);
         app.MapPost("/api/execute", HandleExecute);
         app.MapPost("/api/plan-and-execute", HandlePlanAndExecute);
+
+        app.MapGet("/api/mcp-servers", HandleGetMcpServers);
+        app.MapPost("/api/mcp-servers", HandleAddMcpServer);
+        app.MapDelete("/api/mcp-servers/{name}", HandleRemoveMcpServer);
+
+        app.MapGet("/api/format", HandleGetFormat);
+        app.MapPut("/api/format", HandleSetFormat);
     }
 
     private static Task HandlePlan(HttpContext ctx, PlanRequest req, ExecutorService svc, CancellationToken ct) =>
@@ -42,6 +49,46 @@ public static class MakerApiEndpoints
 
             emit(new SseEvent("complete", JsonSerializer.Serialize(new { steps, result })));
         });
+
+    // ?? MCP server management ?????????????????????????????????????????????
+
+    private static IResult HandleGetMcpServers(ExecutorService svc) =>
+        Results.Ok(svc.GetMcpServers());
+
+    private static IResult HandleAddMcpServer(McpServerRequest req, ExecutorService svc)
+    {
+        if (string.IsNullOrWhiteSpace(req.Name) || string.IsNullOrWhiteSpace(req.Url))
+            return Results.BadRequest(new { message = "Name and Url are required." });
+
+        if (!Uri.TryCreate(req.Url, UriKind.Absolute, out var uri))
+            return Results.BadRequest(new { message = "Invalid URL." });
+
+        svc.AddMcpServer(new MCPServerInfo
+        {
+            Name = req.Name.Trim(),
+            Description = req.Description?.Trim() ?? string.Empty,
+            Url = uri,
+            ApiKey = string.IsNullOrWhiteSpace(req.ApiKey) ? null : req.ApiKey.Trim()
+        });
+        return Results.Ok(svc.GetMcpServers());
+    }
+
+    private static IResult HandleRemoveMcpServer(string name, ExecutorService svc) =>
+        svc.RemoveMcpServer(name) ? Results.Ok(svc.GetMcpServers()) : Results.NotFound();
+
+    // ?? Format management ????????????????????????????????????????????????????
+
+    private static IResult HandleGetFormat(ExecutorService svc) =>
+        Results.Ok(new { format = svc.GetConfiguredFormat() });
+
+    private static IResult HandleSetFormat(FormatRequest req, ExecutorService svc)
+    {
+        if (string.IsNullOrWhiteSpace(req.Format))
+            return Results.BadRequest(new { message = "Format is required." });
+
+        svc.SetFormat(req.Format);
+        return Results.Ok(new { format = svc.GetConfiguredFormat() });
+    }
 
     // -------------------------------------------------------------------------
 
@@ -88,3 +135,5 @@ public static class MakerApiEndpoints
 
 public record PlanRequest(string Prompt, int BatchSize = 2, int K = 10);
 public record ExecuteRequest(string Prompt, string StepsJson, int BatchSize = 2, int K = 10);
+public record McpServerRequest(string Name, string Url, string? Description = null, string? ApiKey = null);
+public record FormatRequest(string Format);
