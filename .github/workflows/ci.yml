@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  build-and-test:
+  build:
     name: Build ${{ matrix.rid }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -54,18 +54,15 @@ jobs:
 
           # Bundle binary + appsettings + instruction files into a tarball
           tar -czf maker-mcp-${{ matrix.rid }}.tar.gz -C ./dist .
-
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          registry-url: 'https://npm.pkg.github.com'
-
-      # Sync package.json version with the git tag (strips the 'v' prefix)
-      - name: Set version
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          npm version "$VERSION" --no-git-tag-version --allow-same-version
-        working-directory: MAKER.Npm
 
       - name: npm test
         run: npm test

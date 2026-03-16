@@ -58,6 +58,7 @@ jobs:
         with:
           name: maker-mcp-${{ matrix.rid }}
           path: maker-mcp-${{ matrix.rid }}.tar.gz
+          retention-days: 1
 
   # ── Create GitHub Release with all tarballs ────────────────────────────────
   release:
