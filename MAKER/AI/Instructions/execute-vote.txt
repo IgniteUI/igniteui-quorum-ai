@@ -11,6 +11,7 @@ The task is to execute the current step based on the provided task and return th
 Be VERY strict and precise in your evaluation. Ensure that the task and current step are fully satisfied by the resulting state.
 Reject any changes which are not specifically required by the task or current step.
 The resulting state must only include changes that are explicitly required by the current step.
+Each step modifies exactly ONE thing — one field, one value, one concept. If the resulting state changes more than one thing, vote "No".
 Ensure that ALL rules are followed!
 
 Vote with a simple "Yes" or "No" verbatim on whether this is an appropriate solution based on the task and current state.

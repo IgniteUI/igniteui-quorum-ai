@@ -21,7 +21,7 @@ namespace MAKER.AI.Orchestrators
             new AIRedFlagMinLengthValidator(100),
         ];
 
-        public async Task<IList<Step>> Plan(string prompt, string format = "plaintext", int batchSize = 2, int k = 10, IList<Step>? prependSteps = null, List<IAIRedFlagValidator>? validators = null, object? tools = null, List<MCPServerInfo>? mcpServers = null, CancellationToken cancellationToken = default)
+        public async Task<IList<Step>> Plan(string prompt, string format = "plaintext", int batchSize = 2, int k = 10, int maxSteps = 10, IList<Step>? prependSteps = null, List<IAIRedFlagValidator>? validators = null, object? tools = null, List<MCPServerInfo>? mcpServers = null, CancellationToken cancellationToken = default)
         {
             var step = string.Empty;
             AIVoteException? lastRejection = null;
@@ -45,7 +45,7 @@ namespace MAKER.AI.Orchestrators
 
                 try
                 {
-                    var proposedSteps = await PlanInternal(prompt, steps, batchSize, format, k, validators, lastRejection!, tools, mcpServers, cancellationToken);
+                    var proposedSteps = await PlanInternal(prompt, steps, batchSize, format, k, maxSteps, validators, lastRejection!, tools, mcpServers, cancellationToken);
 
                     foreach (var stepObj in proposedSteps)
                     {
@@ -63,13 +63,22 @@ namespace MAKER.AI.Orchestrators
 
                     OnStepsAccepted?.Invoke(proposedSteps, [.. steps]);
                     // Reset retry count on successful planning
+                    
                     votingRetryCount = 0;
+
+                    if (steps.Count >= maxSteps)
+                    {
+                        break;
+                    }
                 }
                 catch (AIVoteException ex)
                 {
                     if (ex.Reason == VoteCancellationReason.Rejected)
                     {
-                        lastRejection = ex;
+                        var accumulatedReasons = lastRejection != null
+                            ? lastRejection.RejectionReasons.Concat(ex.RejectionReasons)
+                            : ex.RejectionReasons;
+                        lastRejection = new AIVoteException(ex.Message, ex.ProposedSteps, accumulatedReasons);
                         votingRetryCount++;
 
                         // If max retries exceeded, restart planning from scratch
@@ -89,7 +98,10 @@ namespace MAKER.AI.Orchestrators
                 }
                 catch (AIRedFlagException ex)
                 {
-                    lastRejection = new(ex.Message, VoteCancellationReason.Rejected);
+                    var accumulatedReasons = lastRejection != null
+                        ? lastRejection.RejectionReasons.Concat([ex.Message])
+                        : [ex.Message];
+                    lastRejection = new AIVoteException(ex.Message, [], accumulatedReasons);
                     continue;
                 }
                 lastRejection = null;
@@ -98,7 +110,7 @@ namespace MAKER.AI.Orchestrators
             return steps;
         }
 
-        internal async Task<List<Step>> PlanInternal(string task, IEnumerable<Step> steps, int batchSize = 2, string format = "plaintext", int k = 5, List<IAIRedFlagValidator>? validators = null, AIVoteException? lastRejection = null, object? tools = null, List<MCPServerInfo>? mcpServers = null, CancellationToken cancellationToken = default)
+        internal async Task<List<Step>> PlanInternal(string task, IEnumerable<Step> steps, int batchSize = 2, string format = "plaintext", int k = 5, int maxSteps = 10, List<IAIRedFlagValidator>? validators = null, AIVoteException? lastRejection = null, object? tools = null, List<MCPServerInfo>? mcpServers = null, CancellationToken cancellationToken = default)
         {
             var planTemplate = await ReadPromptTemplate(config.Instructions.Plan, cancellationToken);
             var planFormat = await ReadPromptTemplate(config.Instructions.PlanFormat, cancellationToken);
@@ -110,7 +122,8 @@ namespace MAKER.AI.Orchestrators
                 .Replace(TemplateVariables.PlanRules, rules)
                 .Replace(TemplateVariables.OutputFormat, format)
                 .Replace(TemplateVariables.PlanFormat, planFormat)
-                .Replace(TemplateVariables.BatchSize, batchSize.ToString());
+                .Replace(TemplateVariables.BatchSize, batchSize.ToString())
+                .Replace(TemplateVariables.MaxSteps, maxSteps.ToString());
 
             if (lastRejection != null)
             {
@@ -161,6 +174,8 @@ namespace MAKER.AI.Orchestrators
             {
                 throw new AIRedFlagException("Deserialized plan is empty.");
             }
+
+            StepAtomicityValidator.ValidateAll(deserializedSteps);
 
             try
             {

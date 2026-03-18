@@ -1,4 +1,4 @@
-You are voting on steps proposed for a planning task. Steps will be executed sequentially by a separate AI agent that maintains a running text state. Each step receives the prior state and outputs an updated state.
+You are voting on steps proposed for a planning task. Steps will be executed sequentially by a separate AI agent that maintains a running text state. Each step receives the prior state and outputs an updated state. Each step MUST modify exactly ONE thing — one field, one value, one concept.
 
 The overall task is:
 <task>
@@ -13,7 +13,13 @@ Voting rules:
 - The step must directly contribute to completing the task and be actionable by a single AI agent without further decomposition.
 - The step must produce a meaningful change to the running state.
 - If there is step numbering, formatting, or indexing - vote "No".
-- If the step is not atomic or changes multiple things at once - vote "No".
+- CRITICAL: Each step MUST modify exactly ONE thing — one field, one value, one concept. If a step changes more than one thing at once, vote "No" immediately.
+- ATOMICITY EXAMPLES — vote "No" for steps like:
+  - "Determine the name and the age" ? two fields, must be two steps
+  - "Calculate width, height, and depth" ? three fields, must be three steps
+  - "Set the color and update the size" ? two modifications, must be two steps
+  - "Determine the X and generate the Y" ? two actions, must be two steps
+  A valid atomic step touches exactly ONE field/value/concept.
 - If the step provides examples or suggestions instead of a concrete action - vote "No".
 - SEMANTIC DUPLICATE CHECK: If a proposed step accomplishes the same outcome as any existing step — even if worded differently — vote "No". Two steps are duplicates if executing both would be redundant.
 - If the step is too vague for an executor agent to act on without guessing intent - vote "No".

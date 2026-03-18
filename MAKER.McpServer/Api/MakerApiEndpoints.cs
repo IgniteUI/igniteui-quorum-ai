@@ -24,7 +24,7 @@ public static class MakerApiEndpoints
     private static Task HandlePlan(HttpContext ctx, PlanRequest req, ExecutorService svc, CancellationToken ct) =>
         StreamSse(ctx, svc, ct, async (executor, emit, token) =>
         {
-            var steps = await executor.Plan(req.Prompt, req.BatchSize, req.K, cancellationToken: token);
+            var steps = await executor.Plan(req.Prompt, req.BatchSize, req.K, req.MaxSteps, cancellationToken: token);
             emit(new SseEvent("complete", JsonSerializer.Serialize(steps)));
         });
 
@@ -42,7 +42,7 @@ public static class MakerApiEndpoints
         StreamSse(ctx, svc, ct, async (executor, emit, token) =>
         {
             emit(new SseEvent("phase", "Planning..."));
-            var steps = await executor.Plan(req.Prompt, req.BatchSize, req.K, cancellationToken: token);
+            var steps = await executor.Plan(req.Prompt, req.BatchSize, req.K, req.MaxSteps, cancellationToken: token);
 
             emit(new SseEvent("phase", $"Executing {steps.Count} steps..."));
             var result = await executor.Execute(steps, req.Prompt, req.BatchSize, req.K, cancellationToken: token);
@@ -129,7 +129,7 @@ public static class MakerApiEndpoints
     }
 }
 
-public record PlanRequest(string Prompt, int BatchSize = 2, int K = 10);
+public record PlanRequest(string Prompt, int BatchSize = 2, int K = 10, int MaxSteps = 10);
 public record ExecuteRequest(string Prompt, string StepsJson, int BatchSize = 2, int K = 10);
 public record McpServerRequest(string Name, string Url, string? Description = null, string? ApiKey = null);
 public record FormatRequest(string Format);

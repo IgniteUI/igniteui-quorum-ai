@@ -1,11 +1,17 @@
 Steps:
 - Output 1 to {BATCH_SIZE} steps to append to the current steps, keeping in mind the previous steps
 - Do NOT output more than {BATCH_SIZE} steps
+- The total number of steps (existing + new) MUST NOT exceed {MAX_STEPS}. If adding new steps would exceed this limit, output only enough to reach the limit and then output "End"
 Duplication:
 - Do NOT propose any step that is semantically equivalent to an existing step, even if worded differently. Two steps are duplicates if they would produce the same outcome when executed
 - Before proposing a step, verify it does not overlap with any existing step's intent or effect
 Logic:
-- Each step should be atomic: it should do exactly ONE thing. If a step touches more than one field or concept, split it
+- CRITICAL: Each step MUST modify exactly ONE thing — one field, one value, one concept. No exceptions. If a step touches more than one field or concept, it MUST be split into separate steps
+- A step that modifies two or more fields is ALWAYS wrong, even if the fields are related
+- VIOLATION EXAMPLES (never do these):
+  - "Determine the name and the age" ? WRONG, split into two steps
+  - "Calculate width, height, and depth" ? WRONG, split into three steps
+  - "Determine the X and generate the Y" ? WRONG, split into two steps
 - Do not split generating a value and setting it into separate steps
 - The steps should be simple to execute, atomic, maximally decomposed, incremental, and quick to execute by a single agent
 - The steps should require minimal context to execute

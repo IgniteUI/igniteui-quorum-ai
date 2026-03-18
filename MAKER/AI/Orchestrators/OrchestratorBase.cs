@@ -36,7 +36,7 @@ namespace MAKER.AI.Orchestrators
             while (positive < negative + k && negative < positive + k && end != k)
             {
                 end = 0;
-                if (positive + negative >= k * 2)
+                if (positive + negative >= k * 3)
                 {
                     throw new AIVoteException("Voting round exceeded maximum number of votes without reaching consensus.", VoteCancellationReason.Contentious);
                 }

@@ -12,6 +12,7 @@ namespace MAKER.AI.Constants
         public const string OutputFormat = "{OUTPUT_FORMAT}";
         public const string PlanFormat = "{PLAN_FORMAT}";
         public const string BatchSize = "{BATCH_SIZE}";
+        public const string MaxSteps = "{MAX_STEPS}";
         public const string ExtraContext = "{EXTRA_CONTEXT}";
         public const string LastRejection = "{LAST_REJECTION}";
     }

@@ -1,8 +1,8 @@
 // An array of Step objects
 [
-    // A single atomic Step object
+    // A single atomic Step object — MUST modify exactly ONE thing (one field, one value, one concept)
     {
-      // The atomic task to execute
+      // The atomic task to execute — must target a single modification only
       "Task": string,
       // Any extra information/context which may be required to execute the step. Can include examples and explanations. Should be used instead of `RequiresFormat` to provide type verbose hints if possible
       // NOTE: If `RequiresFormat` is false the agent will not know the `format` of the output so `ExtraContext` should provide sufficient information to complete the step.

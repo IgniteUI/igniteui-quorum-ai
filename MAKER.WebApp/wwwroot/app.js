@@ -18,6 +18,7 @@ function saveSettings() {
       prompt:     promptEl.value,
       batchSize:  parseInt(batchSizeEl.value, 10),
       k:          parseInt(kEl.value, 10),
+      maxSteps:   parseInt(maxStepsEl.value, 10),
       format:     formatEl.value,
       mcpServers: cachedMcpServers
     }));
@@ -42,6 +43,8 @@ const batchSizeEl   = $('batchSize');
 const batchSizeVal  = $('batchSizeVal');
 const kEl           = $('kInput');
 const kVal          = $('kVal');
+const maxStepsEl    = $('maxSteps');
+const maxStepsVal   = $('maxStepsVal');
 const planBtn       = $('planBtn');
 const executeBtn    = $('executeBtn');
 const planExBtn     = $('planExecuteBtn');
@@ -65,6 +68,7 @@ const mcpCountEl    = $('mcpCount');
 // ── Slider labels ──────────────────────────────────────────────────────────
 batchSizeEl.addEventListener('input', () => { batchSizeVal.textContent = batchSizeEl.value; saveSettings(); });
 kEl.addEventListener('input', () => { kVal.textContent = kEl.value; saveSettings(); });
+maxStepsEl.addEventListener('input', () => { maxStepsVal.textContent = maxStepsEl.value; saveSettings(); });
 promptEl.addEventListener('input', saveSettings);
 formatEl.addEventListener('input', () => { saveSettings(); syncFormat(); });
 
@@ -200,7 +204,8 @@ function getParams() {
   return {
     prompt:    promptEl.value.trim(),
     batchSize: parseInt(batchSizeEl.value, 10),
-    k:         parseInt(kEl.value, 10)
+    k:         parseInt(kEl.value, 10),
+    maxSteps:  parseInt(maxStepsEl.value, 10)
   };
 }
 
@@ -488,6 +493,7 @@ async function init() {
     if (saved.prompt != null)    promptEl.value    = saved.prompt;
     if (saved.batchSize != null) { batchSizeEl.value = saved.batchSize; batchSizeVal.textContent = saved.batchSize; }
     if (saved.k != null)         { kEl.value = saved.k; kVal.textContent = saved.k; }
+    if (saved.maxSteps != null)  { maxStepsEl.value = saved.maxSteps; maxStepsVal.textContent = saved.maxSteps; }
     if (saved.format != null)    formatEl.value = saved.format;
   }
 

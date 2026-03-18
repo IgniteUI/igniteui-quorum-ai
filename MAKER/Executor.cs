@@ -58,12 +58,13 @@ namespace MAKER
         }
 
         /// <inheritdoc />
-        public async Task<IList<Step>> Plan(string prompt, int batchSize = 2, int k = 10, IList<Step>? prependSteps = null, List<IAIRedFlagValidator>? validators = null, object? tools = null, CancellationToken cancellationToken = default)
+        public async Task<IList<Step>> Plan(string prompt, int batchSize = 2, int k = 10, int maxSteps = 10, IList<Step>? prependSteps = null, List<IAIRedFlagValidator>? validators = null, object? tools = null, CancellationToken cancellationToken = default)
         {
             if (batchSize <= 0) throw new ArgumentOutOfRangeException($"{nameof(batchSize)} must be greater than zero");
             if (k <= 0) throw new ArgumentOutOfRangeException($"{nameof(k)} must be greater than zero");
+            if (maxSteps <= 0) throw new ArgumentOutOfRangeException($"{nameof(maxSteps)} must be greater than zero");
 
-            return await _planningOrchestrator.Plan(prompt, Format, batchSize, k, prependSteps, validators, tools, _mcpServers, cancellationToken);
+            return await _planningOrchestrator.Plan(prompt, Format, batchSize, k, maxSteps, prependSteps, validators, tools, _mcpServers, cancellationToken);
         }
 
         /// <inheritdoc />

@@ -1,5 +1,6 @@
 - Execute the current steps based on the provided task and return the output state.
 - Execute the current_steps ONLY and output ONLY the resulting state. Do not include any explanations, notes, or additional text.
+- CRITICAL: Each step modifies exactly ONE thing — one field, one value, one concept. Apply only that single change per step. NOTHING ELSE.
 - CRITICAL: Make ONLY the changes explicitly required by the current_steps and task. NOTHING ELSE.
 - ZERO tolerance for extraneous changes. Any modifications beyond the exact task requirements will lead to IMMEDIATE rejection.
 - DO NOT make improvements, optimizations, or refactorings unless explicitly requested in the task.
