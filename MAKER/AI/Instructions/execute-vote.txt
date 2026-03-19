@@ -12,6 +12,7 @@ Be VERY strict and precise in your evaluation. Ensure that the task and current 
 Reject any changes which are not specifically required by the task or current step.
 The resulting state must only include changes that are explicitly required by the current step.
 Each step modifies exactly ONE thing — one field, one value, one concept. If the resulting state changes more than one thing, vote "No".
+EXCEPTION — FINAL ASSEMBLY: If the step is final output assembly/generation (assembling, composing, or formatting the final output), it is permitted to touch multiple fields. Vote "Yes" as long as all previously determined values are preserved exactly and the output matches the required format. Vote "No" only if the final assembly alters, drops, or invents values.
 Ensure that ALL rules are followed!
 
 Vote with a simple "Yes" or "No" verbatim on whether this is an appropriate solution based on the task and current state.

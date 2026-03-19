@@ -12,5 +12,10 @@
         public string ExtraContext { get; set; } = string.Empty;
 
         public bool RequiresFormat { get; set; }
+
+        /// <summary>
+        /// Whether the voters require information about the output format when voting on this step.
+        /// </summary>
+        public bool VoteRequiresFormat { get; set; }
     }
 }

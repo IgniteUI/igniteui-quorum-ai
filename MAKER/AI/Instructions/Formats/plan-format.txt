@@ -10,6 +10,8 @@
       // OR e.g. "otherField": number | string | null
       "ExtraContext": string,
       // True if the task requires the specific output format for the overall task. If a step sets a value and has no `ExtraContext` describing it, this should probably be true
-      "RequiresFormat": bool
+      "RequiresFormat": bool,
+      // True if the voters require knowledge of the output format when voting on this step's result
+      "VoteRequiresFormat": bool
     }
 ]

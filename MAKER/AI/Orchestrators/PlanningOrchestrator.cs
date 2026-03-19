@@ -61,15 +61,10 @@ namespace MAKER.AI.Orchestrators
                         }
                     }
 
-                    OnStepsAccepted?.Invoke(proposedSteps, [.. steps]);
+                    OnStepsAccepted?.Invoke(proposedSteps, steps);
                     // Reset retry count on successful planning
                     
                     votingRetryCount = 0;
-
-                    if (steps.Count >= maxSteps)
-                    {
-                        break;
-                    }
                 }
                 catch (AIVoteException ex)
                 {

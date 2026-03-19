@@ -285,7 +285,7 @@ Add to your `.vscode/mcp.json` (workspace) or user MCP settings:
 }
 ```
 
-Switch Copilot Chat to **Agent** mode and click the 🔧 tools icon to confirm `maker_plan`, `maker_execute`, and `maker_plan_and_execute` are listed.
+Switch Copilot Chat to **Agent** mode and click the 🔧 tools icon to confirm `plan`, `execute`, and `plan_and_execute` are listed.
 
 #### Other MCP Clients
 
@@ -400,11 +400,11 @@ These parameters are specified in natural language when calling the tools (see e
 
 | Tool | Description |
 |---|---|
-| `maker_plan` | Decompose a task into a validated, ordered step list |
-| `maker_execute` | Execute a step list produced by `maker_plan` |
-| `maker_plan_and_execute` | Plan and execute in one call with live progress |
+| `plan` | Decompose a task into a validated, ordered step list |
+| `execute` | Execute a step list produced by `plan` |
+| `plan_and_execute` | Plan and execute in one call with live progress |
 
-#### maker_plan
+#### plan
 
 Decomposes a task into a validated, ordered list of steps without executing them. Returns a JSON array of `Step` objects.
 
@@ -435,22 +435,22 @@ Decomposes a task into a validated, ordered list of steps without executing them
 ]
 ```
 
-#### maker_execute
+#### execute
 
-Executes a step list produced by `maker_plan`. Each batch is validated by the voting system before the state is advanced.
+Executes a step list produced by `plan`. Each batch is validated by the voting system before the state is advanced.
 
 **Parameters**
 
 | Name | Type | Default | Description |
 |---|---|---|---|
-| `stepsJson` | `string` | — | JSON array from `maker_plan` |
+| `stepsJson` | `string` | — | JSON array from `plan` |
 | `prompt` | `string` | — | The original task (provides context) |
 | `batchSize` | `integer` | `2` | Steps executed per round |
 | `k` | `integer` | `10` | Consensus threshold |
 
 **Returns** — the final accumulated result as a string.
 
-#### maker_plan_and_execute
+#### plan_and_execute
 
 Convenience tool that runs both phases in a single call. Streaming progress events are sent between phases.
 
@@ -470,33 +470,33 @@ Convenience tool that runs both phases in a single call. Streaming progress even
 
 Ask your MCP client (e.g. Claude):
 
-> Use maker_plan_and_execute to write a detailed comparison of REST vs GraphQL for a technical blog post.
+> Use plan_and_execute to write a detailed comparison of REST vs GraphQL for a technical blog post.
 
 This uses the defaults: `batchSize=2` and `k=10`.
 
 #### Inspect the plan before executing
 
-> 1. Use maker_plan to create a plan for migrating a PostgreSQL schema to a multi-tenant design.
+> 1. Use plan to create a plan for migrating a PostgreSQL schema to a multi-tenant design.
 > 2. Show me the steps.
-> 3. Use maker_execute with those steps to carry out the migration script.
+> 3. Use execute with those steps to carry out the migration script.
 
 #### Fast execution with larger batches
 
 For faster execution at the cost of less granular control:
 
-> Use maker_plan_and_execute with batchSize=5 and k=10 to generate unit tests for my authentication module.
+> Use plan_and_execute with batchSize=5 and k=10 to generate unit tests for my authentication module.
 
 #### High-confidence execution with stricter consensus
 
 For critical tasks requiring maximum confidence:
 
-> Use maker_plan_and_execute with batchSize=2 and k=15 to review this smart contract for security vulnerabilities.
+> Use plan_and_execute with batchSize=2 and k=15 to review this smart contract for security vulnerabilities.
 
 #### Low-cost exploratory task
 
 For quick prototyping or low-stakes tasks, reduce both parameters to minimize token usage:
 
-> Use maker_plan_and_execute with batchSize=3 and k=3 to draft a project README for a Node.js CLI tool.
+> Use plan_and_execute with batchSize=3 and k=3 to draft a project README for a Node.js CLI tool.
 
 ### Caching
 

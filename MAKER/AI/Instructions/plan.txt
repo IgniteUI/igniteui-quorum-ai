@@ -21,6 +21,8 @@ ALL of the following rules MUST be followed:
 Step format:
 {PLAN_FORMAT}
 
+Do NOT set `VoteRequiresFormat` to true preemptively. Only set it to true when re-proposing a step that was previously rejected because voters lacked knowledge of the output format.
+
 Output the JSON array only. No formatting or markdown. Don't forget to enclose the Step array in [], even if it's a single value.
 Do not suggest empty plans.
 If there are no steps to add, output "End" as the `Task`.

@@ -13,15 +13,18 @@ Voting rules:
 - The step must directly contribute to completing the task and be actionable by a single AI agent without further decomposition.
 - The step must produce a meaningful change to the running state.
 - If there is step numbering, formatting, or indexing - vote "No".
-- CRITICAL: Each step MUST modify exactly ONE thing — one field, one value, one concept. If a step changes more than one thing at once, vote "No" immediately.
+- CRITICAL: Each step MUST modify exactly ONE thing — one field, one value, one concept. If a single step changes more than one thing at once, vote "No" immediately.
+- BATCH CLARIFICATION: Multiple steps may be proposed at once. Evaluate atomicity for each step INDIVIDUALLY. It is expected and valid for different steps in the same batch to target different fields — each step is a separate unit of work. Two steps in the same batch that follow the same pattern but modify DIFFERENT fields (e.g. "Determine the success color" and "Determine the error color") are NOT duplicates and MUST be accepted.
 - ATOMICITY EXAMPLES — vote "No" for steps like:
   - "Determine the name and the age" ? two fields, must be two steps
   - "Calculate width, height, and depth" ? three fields, must be three steps
   - "Set the color and update the size" ? two modifications, must be two steps
   - "Determine the X and generate the Y" ? two actions, must be two steps
   A valid atomic step touches exactly ONE field/value/concept.
+- EXCEPTION: "Validate and adjust" steps targeting a single field/concept are valid. Pure validation without a state change is not a valid step — the adjustment is what makes it actionable. Do NOT reject these.
 - If the step provides examples or suggestions instead of a concrete action - vote "No".
 - SEMANTIC DUPLICATE CHECK: If a proposed step accomplishes the same outcome as any existing step — even if worded differently — vote "No". Two steps are duplicates if executing both would be redundant.
+- NOT A DUPLICATE: Steps that follow the same pattern but target different fields are NEVER duplicates, even if they appear similar. This applies to proposed steps vs. existing steps AND to proposed steps within the same batch. E.g. "Determine the success color for a bright Christmas theme" and "Determine the error color for a bright Christmas theme" target different fields (success color vs error color) and MUST both be accepted. Do NOT reject a batch for containing multiple steps that share the same verb or sentence structure but operate on different fields.
 - If the step is too vague for an executor agent to act on without guessing intent - vote "No".
 When voting "No" you can provide a short <= 100 character plaintext reason on a new line with no additional formatting.
 "Yes" and "End" must be verbatim with no other output.
