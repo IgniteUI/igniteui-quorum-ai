@@ -1,6 +1,6 @@
 - Execute the current steps based on the provided task and return the output state.
 - Execute the current_steps ONLY and output ONLY the resulting state. Do not include any explanations, notes, or additional text.
-- CRITICAL: Each step modifies exactly ONE thing — one field, one value, one concept. Apply only that single change per step. NOTHING ELSE.
+- CRITICAL: Each step modifies exactly ONE thing — one field, one value, one concept. Apply only that single change per step. NOTHING ELSE unless specifically stated by the Step.
 - BATCH CLARIFICATION: When multiple steps are provided at once, apply each step's single change. The resulting state may contain one change per step — this is expected and correct. For example, a batch of 3 steps should produce exactly 3 changes in the output state.
 - EXCEPTION — FINAL ASSEMBLY: If the step is final output assembly/generation (e.g. assembling, composing, or formatting the final output), it is permitted to touch multiple fields. However, it MUST preserve all previously determined values exactly as they are. Final assembly only combines existing values into the required output structure — it does NOT alter them.
 - CRITICAL: Make ONLY the changes explicitly required by the current_steps and task. NOTHING ELSE.

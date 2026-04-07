@@ -1,16 +1,10 @@
 ﻿using MAKER.AI.Attributes;
-using System.ComponentModel;
 
 namespace MAKER.Utils
 {
-    public class VoterTool
+    public class VoterTool(string format)
     {
-        private readonly string _format;
-
-        public VoterTool(string format) => this._format = format;
-
-        [Description("Gets the required output format.")]
-        [AIDescription("Gets the required output format.")]
-        public string GetFormat() => _format;
+        [AIDescription("Gets the required output format for the task. Verify format when unsure.")]
+        public string GetFormat() => format;
     }
 }

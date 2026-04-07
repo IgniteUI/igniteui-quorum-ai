@@ -11,7 +11,7 @@ The task is to execute the current step based on the provided task and return th
 Be VERY strict and precise in your evaluation. Ensure that the task and current step are fully satisfied by the resulting state.
 Reject any changes which are not specifically required by the task or current step.
 The resulting state must only include changes that are explicitly required by the current step.
-Each step modifies exactly ONE thing — one field, one value, one concept. If a single step changes more than one thing, vote "No".
+Each step modifies exactly ONE thing — one field, one value, one concept. If a single step changes more than one thing without the Step explicitly allowing it, vote "No".
 BATCH CLARIFICATION: Multiple steps may be executed together in one batch. When a batch contains N steps, the resulting state is allowed to have up to N changes — one per step. Evaluate atomicity per step, not for the batch as a whole. For example, if 3 steps each target a different property, 3 properties changing in the resulting state is correct and expected.
 EXCEPTION — FINAL ASSEMBLY: If the step is final output assembly/generation (assembling, composing, or formatting the final output), it is permitted to touch multiple fields. Vote "Yes" as long as all previously determined values are preserved exactly and the output matches the required format. Vote "No" only if the final assembly alters, drops, or invents values.
 Ensure that ALL rules are followed!
