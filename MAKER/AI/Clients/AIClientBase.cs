@@ -2,6 +2,7 @@
 using MAKER.AI.Exceptions;
 using MAKER.AI.Models;
 using MAKER.AI.Validation;
+using MAKER.Utils;
 using Microsoft.Extensions.AI;
 using ModelContextProtocol.Client;
 using System.Reflection;
@@ -16,12 +17,18 @@ namespace MAKER.AI.Clients
 
         public int MaxGuardedRetries { get; set; } = 3;
 
-        public async Task<AIResponse?> Request(string prompt, object? toolsObject = null, List<MCPServerInfo>? mcpServers = null, CancellationToken cancellationToken = default)
+        public async Task<AIResponse?> Request(string prompt, object[]? toolsObjects = null, List<MCPServerInfo>? mcpServers = null, CancellationToken cancellationToken = default)
         {
-            List<AIFunctionInfo>? functions = null;
-            if (toolsObject != null)
+            List<AIFunctionInfo>? functions = [];
+            if (toolsObjects != null)
             {
-                functions = GenerateFunctionInfo(toolsObject);
+                foreach (var toolsObject in toolsObjects)
+                {
+                    if (toolsObject != null)
+                    {
+                        functions.AddRange(GenerateFunctionInfo(toolsObject));
+                    }
+                }
             }
 
             var tools = functions?.Count > 0 ? functions : null;
@@ -30,7 +37,7 @@ namespace MAKER.AI.Clients
             {
                 try
                 {
-                    return await RequestInternal(prompt, tools, toolsObject, mcpServers, cancellationToken);
+                    return await RequestInternal(prompt, tools, mcpServers, cancellationToken);
                 }
                 catch (Exception ex) when (attempt < MaxRequestRetries && IsTransientError(ex, out int delayMs))
                 {
@@ -52,12 +59,12 @@ namespace MAKER.AI.Clients
             return false;
         }
 
-        public Task<AIResponse> GuardedRequest(string prompt, List<IAIRedFlagValidator> validators, object? tools = null, List<MCPServerInfo>? mcpServers = null, CancellationToken cancellationToken = default)
+        public Task<AIResponse> GuardedRequest(string prompt, List<IAIRedFlagValidator> validators, object[]? tools = null, List<MCPServerInfo>? mcpServers = null, CancellationToken cancellationToken = default)
         {
             return GuardedRequestInternal(prompt, validators, tools, mcpServers, MaxGuardedRetries, cancellationToken);
         }
 
-        private async Task<AIResponse> GuardedRequestInternal(string prompt, List<IAIRedFlagValidator> validators, object? tools, List<MCPServerInfo>? mcpServers, int remainingRetries, CancellationToken cancellationToken)
+        private async Task<AIResponse> GuardedRequestInternal(string prompt, List<IAIRedFlagValidator> validators, object[]? tools, List<MCPServerInfo>? mcpServers, int remainingRetries, CancellationToken cancellationToken)
         {
             try
             {
@@ -89,7 +96,7 @@ namespace MAKER.AI.Clients
 
         protected virtual IEnumerable<AITool> GetAdditionalTools() => [];
 
-        protected virtual async Task<AIResponse?> RequestInternal(string prompt, List<AIFunctionInfo>? tools = null, object? toolsObject = null, List<MCPServerInfo>? mcpServers = null, CancellationToken cancellationToken = default)
+        protected virtual async Task<AIResponse?> RequestInternal(string prompt, List<AIFunctionInfo>? tools = null, List<MCPServerInfo>? mcpServers = null, CancellationToken cancellationToken = default)
         {
             int inputTokens = 0;
             int outputTokens = 0;
@@ -117,7 +124,7 @@ namespace MAKER.AI.Clients
 
             foreach (var tool in tools ?? [])
             {
-                aiTools.Add(AIFunctionFactory.Create(tool.Info, toolsObject, tool.Name, tool.Description));
+                aiTools.Add(AIFunctionFactory.Create(tool.Info, tool.Target, tool.Name, tool.Description));
             }
 
             aiTools.AddRange(GetAdditionalTools());
@@ -238,7 +245,8 @@ namespace MAKER.AI.Clients
                         Description = p.GetCustomAttributes<AIDescription>().FirstOrDefault()?.Description ?? string.Empty,
                         IsRequired = !p.IsOptional
                     })],
-                    Info = method
+                    Info = method,
+                    Target = toolsObject
                 };
 
                 functionInfos.Add(functionInfo);

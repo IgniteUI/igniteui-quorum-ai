@@ -4,6 +4,7 @@ using MAKER.AI.Exceptions;
 using MAKER.AI.Models;
 using MAKER.AI.Validation;
 using MAKER.Configuration;
+using MAKER.Utils;
 using System.Diagnostics;
 using System.Text.Json;
 
@@ -16,6 +17,7 @@ namespace MAKER.AI.Orchestrators
         public event Action<IList<Step>, IList<Step>>? OnExecutionStarted;
         public event Action<string>? OnStateChanged;
         #endregion
+
 
         public async Task<string> Execute(IList<Step> steps, string prompt, string format, int batchSize = 3, int k = 10, List<IAIRedFlagValidator>? validators = null, object? tools = null, List<MCPServerInfo>? mcpServers = null, CancellationToken cancellationToken = default)
         {
@@ -74,13 +76,13 @@ namespace MAKER.AI.Orchestrators
 
             prompt = ClearUnusedTemplateVariables(prompt);
 
-            var response = await executionClient.GuardedRequest(prompt, validators ?? [], tools, mcpServers, cancellationToken);
+            var response = await executionClient.GuardedRequest(prompt, validators ?? [], [tools], mcpServers, cancellationToken);
             if (string.IsNullOrEmpty(response.Content))
             {
                 throw new AIRedFlagException("Execution client returned empty response.");
             }
 
-            var (vote, reasons) = await VoteExecutionInternal(task, steps, response.Content, state, k, tools, mcpServers, cancellationToken);
+            var (vote, reasons) = await VoteExecutionInternal(task, format, steps, response.Content, state, k, tools, mcpServers, cancellationToken);
             if (!vote)
             {
                 throw new AIVoteException($"Proposed step was rejected by voting.", steps, reasons);
@@ -89,7 +91,7 @@ namespace MAKER.AI.Orchestrators
             return response.Content;
         }
 
-        internal async Task<(bool, IEnumerable<string>)> VoteExecutionInternal(string task, IEnumerable<Step> proposed, string state, string prevState, int k = 5, object? tools = null, List<MCPServerInfo>? mcpServers = null, CancellationToken cancellationToken = default)
+        internal async Task<(bool, IEnumerable<string>)> VoteExecutionInternal(string task, string format, IEnumerable<Step> proposed, string state, string prevState, int k = 5, object? tools = null, List<MCPServerInfo>? mcpServers = null, CancellationToken cancellationToken = default)
         {
             var voteTemplate = await ReadPromptTemplate(config.Instructions.ExecuteVote, cancellationToken);
             var rules = await ReadPromptTemplate(config.Instructions.ExecuteRules, cancellationToken);
@@ -103,7 +105,7 @@ namespace MAKER.AI.Orchestrators
 
             prompt = ClearUnusedTemplateVariables(prompt);
 
-            var (vote, reasons, _) = await RunVotingRound(k, prompt, executionVotingClient, tools, mcpServers, cancellationToken: cancellationToken);
+            var (vote, reasons, _) = await RunVotingRound(k, prompt, executionVotingClient, [new VoterTool(format), tools], mcpServers, cancellationToken: cancellationToken);
             return (vote, reasons);
         }
 

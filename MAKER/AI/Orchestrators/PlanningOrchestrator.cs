@@ -4,6 +4,7 @@ using MAKER.AI.Exceptions;
 using MAKER.AI.Models;
 using MAKER.AI.Validation;
 using MAKER.Configuration;
+using MAKER.Utils;
 using System.Text.Json;
 
 namespace MAKER.AI.Orchestrators
@@ -131,7 +132,7 @@ namespace MAKER.AI.Orchestrators
 
             validators ??= DefaultPlanningValidators;
 
-            var responseObj = await planningClient.GuardedRequest(prompt, validators, tools, mcpServers, cancellationToken);
+            var responseObj = await planningClient.GuardedRequest(prompt, validators, [tools], mcpServers, cancellationToken);
             var response = responseObj.Content ?? throw new AIRedFlagException("Received null response from the model.");
 
             if (response == AIResponses.End)
@@ -175,7 +176,7 @@ namespace MAKER.AI.Orchestrators
             try
             {
                 OnStepsProposed?.Invoke(deserializedSteps);
-                var (vote, reasons, usage) = await VotePlanInternal(task, deserializedSteps, steps, batchSize, k, maxSteps, tools, mcpServers, cancellationToken);
+                var (vote, reasons, usage) = await VotePlanInternal(task, format, deserializedSteps, steps, batchSize, k, maxSteps, tools, mcpServers, cancellationToken);
                 if (!vote)
                 {
                     var rejection = new AIVoteException($"Proposed step was rejected by voting.", deserializedSteps, reasons);
@@ -198,7 +199,7 @@ namespace MAKER.AI.Orchestrators
             return deserializedSteps;
         }
 
-        internal async Task<(bool, IEnumerable<string>, AIResponse)> VotePlanInternal(string task, IEnumerable<Step> proposed, IEnumerable<Step> steps, int batchSize = 2, int k = 5, int maxSteps = 20, object? tools = null, List<MCPServerInfo>? mcpServers = null, CancellationToken cancellationToken = default)
+        internal async Task<(bool, IEnumerable<string>, AIResponse)> VotePlanInternal(string task, string format, IEnumerable<Step> proposed, IEnumerable<Step> steps, int batchSize = 2, int k = 5, int maxSteps = 20, object? tools = null, List<MCPServerInfo>? mcpServers = null, CancellationToken cancellationToken = default)
         {
             var voteTemplate = await ReadPromptTemplate(config.Instructions.PlanVote, cancellationToken);
             var planFormat = await ReadPromptTemplate(config.Instructions.PlanFormat, cancellationToken);
@@ -217,7 +218,7 @@ namespace MAKER.AI.Orchestrators
             var proposedIsEnd = proposed.Any(s => s.Task == AIResponses.End);
             try
             {
-                return await RunVotingRound(k, prompt, planVotingClient, tools, mcpServers, treatEndAsYes: proposedIsEnd, cancellationToken: cancellationToken);
+                return await RunVotingRound(k, prompt, planVotingClient, [new VoterTool(format), tools], mcpServers, treatEndAsYes: proposedIsEnd, cancellationToken: cancellationToken);
             }
             catch (AIVoteException ex)
             {

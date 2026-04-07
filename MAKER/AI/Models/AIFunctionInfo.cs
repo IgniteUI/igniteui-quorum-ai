@@ -8,5 +8,6 @@ namespace MAKER.AI.Models
         public string Description { get; init; } = string.Empty;
         public List<AIFunctionParameterInfo> Parameters { get; init; } = [];
         public required MethodInfo Info { get; init; }
+        public required object Target { get; init; }
     }
 }

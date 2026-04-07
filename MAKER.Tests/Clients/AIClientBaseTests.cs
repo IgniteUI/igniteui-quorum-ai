@@ -88,7 +88,7 @@ namespace MAKER.Tests.Clients
             client.Responses.Enqueue(new AIResponse { Content = "done" });
 
             // Request with a tools object triggers GenerateFunctionInfo
-            await client.Request("test", new SampleToolsObject());
+            await client.Request("test", [new SampleToolsObject()]);
 
             // Verify indirectly — the request didn't throw, meaning schema was generated
         }
