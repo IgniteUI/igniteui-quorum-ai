@@ -83,6 +83,11 @@
         <div class="panel__header">
           <h2 class="panel__title">Plan</h2>
           <span id="stepCount" class="badge"></span>
+          <div class="panel__actions">
+            <button id="importPlanBtn" class="icon-btn" title="Import plan">⬇</button>
+            <button id="exportPlanBtn" class="icon-btn" title="Export plan" disabled>⬆</button>
+          </div>
+          <input id="importPlanFile" type="file" accept=".json" hidden />
         </div>
         <div id="steps" class="steps-list"></div>
       </section>

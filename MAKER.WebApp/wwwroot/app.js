@@ -55,6 +55,10 @@ const resultEl      = $('result');
 const feedEl        = $('feed');
 const formatEl      = $('formatSelect');
 
+const exportPlanBtn   = $('exportPlanBtn');
+const importPlanBtn   = $('importPlanBtn');
+const importPlanFile  = $('importPlanFile');
+
 const mcpToggleBtn  = $('mcpToggleBtn');
 const mcpForm       = $('mcpForm');
 const mcpNameEl     = $('mcpName');
@@ -80,6 +84,40 @@ async function syncFormat() {
       body: JSON.stringify({ format: formatEl.value })
     });
   } catch { /* best-effort */ }
+}
+
+// ── Plan export / import ───────────────────────────────────────────────────
+exportPlanBtn.addEventListener('click', exportPlan);
+importPlanBtn.addEventListener('click', () => importPlanFile.click());
+importPlanFile.addEventListener('change', importPlan);
+
+function exportPlan() {
+  if (!currentSteps?.length) return;
+  const blob = new Blob([JSON.stringify(currentSteps, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'plan.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importPlan() {
+  const file = importPlanFile.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const steps = JSON.parse(reader.result);
+      if (!Array.isArray(steps)) throw new Error('Expected an array of steps');
+      renderSteps(steps);
+      showToast(`Imported ${steps.length} step(s)`, 'info');
+    } catch (err) {
+      showToast(`Import failed: ${err.message}`, 'error');
+    }
+  };
+  reader.readAsText(file);
+  importPlanFile.value = '';
 }
 
 // ── MCP Servers ────────────────────────────────────────────────────────────
@@ -333,6 +371,7 @@ function renderSteps(steps) {
   steps.forEach((s, i) => stepsEl.appendChild(makeStepEl(s, 'added', i + 1)));
   stepCountEl.textContent = steps.length;
   executeBtn.disabled = false;
+  exportPlanBtn.disabled = false;
   stepsEl.scrollTop = stepsEl.scrollHeight;
 }
 
@@ -466,10 +505,11 @@ function setRunning(running) {
 }
 
 function clearOutput() {
-  stepsEl.innerHTML  = '';
-  resultEl.innerHTML = '';
-  feedEl.innerHTML   = '';
-  stepCountEl.textContent = '';
+stepsEl.innerHTML  = '';
+resultEl.innerHTML = '';
+feedEl.innerHTML   = '';
+stepCountEl.textContent = '';
+exportPlanBtn.disabled = true;
   statusEl.querySelectorAll('.vote-badge').forEach(el => el.remove());
   const t = statusEl.querySelector('.status-text');
   if (t) t.textContent = '';
