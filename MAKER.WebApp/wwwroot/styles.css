@@ -352,6 +352,11 @@ input[type="range"]::-webkit-slider-thumb:hover {
   opacity: .7;
 }
 
+.step--rejected {
+  border-color: var(--error);
+  opacity: .75;
+}
+
 .step--added {
   border-color: var(--border);
 }
@@ -382,6 +387,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 .step--executing .step-num { color: var(--warning); }
 .step--done      .step-num { color: var(--success); }
+.step--rejected  .step-num { color: var(--error); }
 
 .step-task {
   color: var(--text);

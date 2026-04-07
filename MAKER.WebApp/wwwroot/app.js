@@ -263,6 +263,7 @@ function handleEvent(type, raw) {
             stepsEl.appendChild(makeStepEl(s, 'proposed', '…'));
           }
         });
+        stepsEl.scrollTop = stepsEl.scrollHeight;
         break;
       }
 
@@ -275,6 +276,10 @@ function handleEvent(type, raw) {
       case 'steps_rejected': {
         const reasons = (data.reasons ?? []).join('; ');
         showToast(`Steps rejected — ${reasons}`, 'warning');
+        stepsEl.querySelectorAll('.step--proposed').forEach(el => {
+          el.classList.remove('step--proposed');
+          el.classList.add('step--rejected');
+        });
         break;
       }
 
@@ -328,6 +333,7 @@ function renderSteps(steps) {
   steps.forEach((s, i) => stepsEl.appendChild(makeStepEl(s, 'added', i + 1)));
   stepCountEl.textContent = steps.length;
   executeBtn.disabled = false;
+  stepsEl.scrollTop = stepsEl.scrollHeight;
 }
 
 function makeStepEl(step, state, num) {
