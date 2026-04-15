@@ -79,40 +79,6 @@ jobs:
           files: ./artifacts/*.tar.gz
           generate_release_notes: true
 
-  # ── Publish npm package to GitHub Packages ─────────────────────────────────
-  publish-npm-github:
-    name: Publish to GitHub Packages
-    needs: release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://npm.pkg.github.com'
-
-      # Sync package.json version with the git tag (strips the 'v' prefix)
-      - name: Set version
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          npm version "$VERSION" --no-git-tag-version --allow-same-version
-        working-directory: MAKER.Npm
-
-      - name: Publish
-        run: |
-          if [[ "${GITHUB_REF_NAME}" == *"-alpha"* || "${GITHUB_REF_NAME}" == *"-beta"* || "${GITHUB_REF_NAME}" == *"-rc"* ]]; then
-            npm publish --tag next
-          else
-            npm publish
-          fi
-        working-directory: MAKER.Npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
   # ── Publish npm package to npmjs ─────────────────────────────────
   publish-npmjs:
