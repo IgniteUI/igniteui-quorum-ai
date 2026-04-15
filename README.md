@@ -5,6 +5,10 @@
 MAKER stands for **M**aximal **A**gentic decomposition, first-to-ahead-by-**K** **E**rror correction, and **R**ed-flagging. It is an AI orchestration framework designed to enhance the reliability and accuracy of AI systems through consensus-based voting, proactive validation, and intelligent task decomposition.
 The framework is based on the paper titled [Solving a million-step LLM task with zero errors](https://arxiv.org/pdf/2511.09030) by Cognizant AI Lab.
 
+[![CI](https://github.com/IgniteUI/igniteui-quorum-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/IgniteUI/igniteui-quorum-ai/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/IgniteUI/igniteui-quorum-ai/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/IgniteUI/igniteui-quorum-ai/actions/workflows/github-code-scanning/codeql)
+[![Release](https://github.com/IgniteUI/igniteui-quorum-ai/actions/workflows/release.yml/badge.svg?event=release)](https://github.com/IgniteUI/igniteui-quorum-ai/actions/workflows/release.yml)
+
 ## Key Features
 
 - **Dual-Phase Orchestration**: Separates planning and execution into distinct phases, each with its own AI models and voting mechanisms for specialized task handling.
