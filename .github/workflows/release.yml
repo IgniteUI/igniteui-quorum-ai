@@ -97,9 +97,9 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org/'
 
-      # Ensure npm 11.5.1 or later is installed in order to npm OIDC to work
-      - name: Update npm
-        run: npm install -g npm@latest
+      # Ensure npm 11.5.1 or later is installed in order to npm OIDC to work; Pin 11 for https://github.com/npm/cli/issues/9722
+      - name: Pin npm
+        run: npm install -g npm@11
 
       # Sync package.json version with the git tag (strips the 'v' prefix)
       - name: Set version
