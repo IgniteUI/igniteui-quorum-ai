@@ -54,7 +54,7 @@ jobs:
           # Bundle binary + appsettings + instruction files into a tarball
           tar -czf maker-mcp-${{ matrix.rid }}.tar.gz -C ./dist .
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: maker-mcp-${{ matrix.rid }}
           path: maker-mcp-${{ matrix.rid }}.tar.gz
@@ -69,7 +69,7 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           path: ./artifacts
           merge-multiple: true
@@ -92,7 +92,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org/'
